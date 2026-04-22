@@ -39,6 +39,17 @@ export function scheduleMonitorLog(ctx, kv, entry) {
 }
 
 /**
+ * Registro padronizado no anel de monitoramento (evita repetir `ts` e binding).
+ * @param {ExecutionContext} ctx
+ * @param {Record<string, unknown>} env
+ * @param {Record<string, unknown>} partial campos do evento (event_name, event_id, ok, error, detail, …)
+ */
+export function logMonitor(ctx, env, partial) {
+  if (!ctx) return;
+  scheduleMonitorLog(ctx, env.EVENT_LOG, Object.assign({}, partial, { ts: Date.now() }));
+}
+
+/**
  * @param {KVNamespace | undefined} kv
  */
 export async function listMonitorEvents(kv) {

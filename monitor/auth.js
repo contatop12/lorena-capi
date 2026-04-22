@@ -30,7 +30,13 @@ function secureCompare(a, b) {
 export function monitorTokenOk(request, env) {
   const tok = (env.MONITOR_TOKEN || "").trim();
   if (!tok) return isDevelopment(env);
+  const auth = request.headers.get("Authorization") || "";
+  let bearer = "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (m) bearer = m[1].trim();
   const header = request.headers.get("X-Monitor-Token") || "";
   const q = new URL(request.url).searchParams.get("token") || "";
-  return secureCompare(tok, header) || secureCompare(tok, q);
+  return (
+    secureCompare(tok, bearer) || secureCompare(tok, header) || secureCompare(tok, q)
+  );
 }

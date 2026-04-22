@@ -8,7 +8,7 @@
  * Contrato: directives/contrato_payload_capi.md
  */
 import { handleMonitorRequest } from "./monitor/router.js";
-import { scheduleMonitorLog, truncateUrl } from "./monitor/store.js";
+import { logMonitor, truncateUrl } from "./monitor/store.js";
 
 export default {
   /**
@@ -101,7 +101,7 @@ function corsHeadersFor(request, env) {
   if (allowOrigin) h.set("Access-Control-Allow-Origin", allowOrigin);
   h.set("Vary", "Origin");
   h.set("Access-Control-Allow-Methods", "POST, OPTIONS, GET");
-  h.set("Access-Control-Allow-Headers", "Content-Type, X-Monitor-Token");
+  h.set("Access-Control-Allow-Headers", "Content-Type, X-Monitor-Token, Authorization");
   h.set("Access-Control-Max-Age", "86400");
   return h;
 }
@@ -193,15 +193,12 @@ const MAX_EVENT_NAME_LEN = 128;
 /**
  * @param {Request} request
  * @param {Record<string, string | undefined>} env
- */
-/**
  * @param {ExecutionContext} ctx
  */
 async function handleCollect(request, env, ctx) {
   const ct = request.headers.get("Content-Type") || "";
   if (!ct.toLowerCase().includes("application/json")) {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: null,
       event_id: null,
       ok: false,
@@ -216,8 +213,7 @@ async function handleCollect(request, env, ctx) {
   const apiVersion = (env.META_API_VERSION || "v21.0").trim().replace(/^v?/, "v");
 
   if (!pixelId || !token) {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: null,
       event_id: null,
       ok: false,
@@ -233,8 +229,7 @@ async function handleCollect(request, env, ctx) {
 
   const rawText = await request.text();
   if (rawText.length > MAX_BODY_BYTES) {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: null,
       event_id: null,
       ok: false,
@@ -248,8 +243,7 @@ async function handleCollect(request, env, ctx) {
   try {
     body = JSON.parse(rawText || "{}");
   } catch {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: null,
       event_id: null,
       ok: false,
@@ -260,8 +254,7 @@ async function handleCollect(request, env, ctx) {
   }
 
   if (!body || typeof body !== "object") {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: null,
       event_id: null,
       ok: false,
@@ -273,8 +266,7 @@ async function handleCollect(request, env, ctx) {
 
   const eventName = body.event_name;
   if (!eventName || typeof eventName !== "string") {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: null,
       event_id: typeof body.event_id === "string" ? body.event_id : null,
       ok: false,
@@ -284,8 +276,7 @@ async function handleCollect(request, env, ctx) {
     return jsonResponse(request, env, 500, { ok: false, error: "missing_event_name" });
   }
   if (eventName.length > MAX_EVENT_NAME_LEN) {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: eventName,
       event_id: typeof body.event_id === "string" ? body.event_id : null,
       ok: false,
@@ -334,8 +325,7 @@ async function handleCollect(request, env, ctx) {
       body: JSON.stringify(graphBody),
     });
   } catch (e) {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: eventName,
       event_id: serverEvent.event_id || null,
       ok: false,
@@ -358,8 +348,7 @@ async function handleCollect(request, env, ctx) {
   }
 
   if (!metaRes.ok) {
-    scheduleMonitorLog(ctx, env.EVENT_LOG, {
-      ts: Date.now(),
+    logMonitor(ctx, env, {
       event_name: eventName,
       event_id: serverEvent.event_id || null,
       ok: false,
@@ -377,8 +366,7 @@ async function handleCollect(request, env, ctx) {
 
   const received =
     metaJson && typeof metaJson.events_received === "number" ? metaJson.events_received : undefined;
-  scheduleMonitorLog(ctx, env.EVENT_LOG, {
-    ts: Date.now(),
+  logMonitor(ctx, env, {
     event_name: eventName,
     event_id: serverEvent.event_id || null,
     ok: true,

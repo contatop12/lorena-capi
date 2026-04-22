@@ -2,6 +2,8 @@
 # Mapeamento .env ↔ Wrangler: directives/config_ambiente.md
 # Contrato JSON: directives/contrato_payload_capi.md
 # Chaves espelhadas em: .env.example e .dev.vars.example
+# [vars] típicas: PIXEL_ID, META_API_VERSION, ALLOWED_ORIGINS, WORKER_ENV,
+#   TEST_EVENT_CODE, EXPOSE_META_ERRORS, WORKER_EVENT_URL
 #
 # Segredo (não commitar valor real):
 #   wrangler secret put META_ACCESS_TOKEN

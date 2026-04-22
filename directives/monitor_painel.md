@@ -15,7 +15,7 @@ Exemplo: `https://conversao-api-meta.suporte-922.workers.dev/dashboard`
 
 ## Configuração
 
-1. **`MONITOR_TOKEN`** (secret ou variável cifrada no painel): obrigatório em **`WORKER_ENV=production`**. O painel envia o token no header `X-Monitor-Token` (guardado em `sessionStorage` no browser após clicar em “Definir token”).
+1. **`MONITOR_TOKEN`** (secret ou variável cifrada no painel): obrigatório em **`WORKER_ENV=production`**. O painel envia o token no header `Authorization: Bearer …` (preferido); a API também aceita `X-Monitor-Token` ou `?token=` para scripts legados. O valor fica em `sessionStorage` após “Definir token”.
 2. **`EVENT_LOG`** (binding KV opcional): sem KV, o Worker ainda registra tentativas em memória isolada por invocação de forma limitada — para **histórico persistente** entre requests, crie um namespace KV, descomente `[[kv_namespaces]]` no `wrangler.toml` e faça deploy.
 
 ## Ferramentas

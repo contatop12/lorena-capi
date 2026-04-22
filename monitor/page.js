@@ -244,7 +244,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }
     var h = { Accept: "application/json" };
     var t = token();
-    if (t) h["X-Monitor-Token"] = t;
+    if (t) h["Authorization"] = "Bearer " + t;
     try {
       var res = await fetch("/api/monitor/events", { headers: h, credentials: "same-origin" });
       var data = await res.json().catch(function () { return {}; });

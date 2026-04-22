@@ -1,5 +1,6 @@
 # Renomeie para .dev.vars para `wrangler dev` (não commitar .dev.vars)
 # Mesmas chaves que .env.example — espelho para desenvolvimento local do Worker.
+# Segredos: META_ACCESS_TOKEN, MONITOR_TOKEN (opcional em dev).
 
 PIXEL_ID=
 META_ACCESS_TOKEN=
@@ -9,3 +10,9 @@ WORKER_ENV=development
 ALLOWED_ORIGINS=*
 # TEST_EVENT_CODE=TEST7356
 EXPOSE_META_ERRORS=true
+
+# Referência da URL pública (não lida pelo Worker; útil para snippets)
+# WORKER_EVENT_URL=http://127.0.0.1:8787/event
+
+# Painel /dashboard — em dev pode ficar vazio se WORKER_ENV=development
+# MONITOR_TOKEN=

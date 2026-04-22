@@ -5,7 +5,7 @@
  * Configuração do endpoint (um dos dois):
  *   <script src="tracker.js" data-endpoint="https://seu-worker.workers.dev/event"></script>
  *   Rotas no Worker: POST /event (recomendado), POST /collect ou POST /
- *   window.__META_TRACKER_ENDPOINT__ = "https://.../collect"; // antes de carregar o script
+ *   window.__META_TRACKER_ENDPOINT__ = "https://.../event"; // antes de carregar o script
  *
  * Debug opcional: window.__META_TRACKER_DEBUG__ = true;
  */

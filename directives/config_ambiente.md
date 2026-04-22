@@ -13,9 +13,13 @@ O código (`tracker.js`, `worker.js`) é **fixo** entre clientes. O que muda é 
 | `WORKER_ENV` | `production` ou `development` | `.dev.vars` / `[vars]` | Não |
 | `TEST_EVENT_CODE` | Opcional (Events Manager) | secret ou var | Não |
 | `EXPOSE_META_ERRORS` | `true`/`false` — detalhe de erro Meta na resposta | `[vars]` | Não |
+| `WORKER_EVENT_URL` | Referência humana / snippet no site (não lida pelo Worker) | `.env` / comentário | Não |
+| `MONITOR_TOKEN` | Painel `/dashboard` e `GET /api/monitor/events` | `wrangler secret put MONITOR_TOKEN` ou `[vars]` em dev | **Sim** (produção) |
+| `EVENT_LOG` | Binding KV opcional — histórico do monitor entre invocações | `wrangler.toml` `[[kv_namespaces]]` | Não |
 
 ## Arquivos de referência no repositório
 
+- **Segredos e gitignore**: [config_segredos.md](config_segredos.md).
 - **Modelo humano / CI**: [`.env.example`](../.env.example) — documenta todas as chaves; copie para `.env` na sua máquina se quiser um único arquivo de referência (o Worker na Cloudflare **não** lê `.env` automaticamente).
 - **Wrangler local**: [`.dev.vars.example`](../.dev.vars.example) → copie para `.dev.vars` (gitignored) com os mesmos nomes de chave.
 - **Deploy**: [wrangler.toml](../wrangler.toml) — `name` do worker por cliente; `[vars]` espelha `PIXEL_ID`, `META_API_VERSION`, `ALLOWED_ORIGINS`; token só via **secret**.
@@ -32,7 +36,7 @@ O browser não acessa seu `.env`. Obrigatório expor a URL do Worker no HTML:
 ></script>
 ```
 
-Use o mesmo host que estiver em `WORKER_COLLECT_URL` no seu `.env` (comentário de referência em `.env.example`).
+Use o mesmo host que estiver em `WORKER_EVENT_URL` no seu `.env` (comentário de referência em `.env.example`).
 
 ## Fluxo por novo cliente
 
