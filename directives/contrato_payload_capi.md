@@ -33,3 +33,5 @@
 ## Variáveis de ambiente (replicação por cliente)
 
 Ver [.env.example](../.env.example), `wrangler.toml` e [config_ambiente.md](config_ambiente.md). Troca de cliente: **mesmo código**, novos valores de `PIXEL_ID`, `META_ACCESS_TOKEN`, `ALLOWED_ORIGINS`, `META_API_VERSION`.
+
+Se `TEST_EVENT_CODE` estiver definido no Worker (ex.: `TEST7356`), o backend inclui `test_event_code` no JSON enviado à Meta — os eventos aparecem em **Testar eventos** no Events Manager, não na atribuição real. Remova a variável após validar.

@@ -7,5 +7,5 @@ META_API_VERSION=v21.0
 # Local: use development + * se precisar testar de qualquer origem
 WORKER_ENV=development
 ALLOWED_ORIGINS=*
-# TEST_EVENT_CODE=
+# TEST_EVENT_CODE=TEST7356
 EXPOSE_META_ERRORS=true

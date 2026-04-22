@@ -13,16 +13,16 @@ main = "worker.js"
 compatibility_date = "2024-10-01"
 
 # Variáveis públicas de configuração (por cliente / ambiente)
+# Cliente ativo: Lorena / LCOAdv — ver directives/cliente_lorena_lcoadv.md
 [vars]
-PIXEL_ID = ""
+PIXEL_ID = "993975279878737"
 META_API_VERSION = "v21.0"
-# Produção: lista explícita, ex.: https://www.cliente.com,https://cliente.com
-# Não deixe vazio nem * em produção (WORKER_ENV=production).
-ALLOWED_ORIGINS = ""
+# Produção: lista explícita. Adicione https://lcoadv.com.br se o site responder sem www.
+ALLOWED_ORIGINS = "https://www.lcoadv.com.br"
 # production = CORS estrito; development = permite * ou vazio em ALLOWED_ORIGINS
 WORKER_ENV = "production"
-# Opcional: código de teste da Meta (Events Manager). Remova em produção real.
-# TEST_EVENT_CODE = ""
+# Test Events (Meta Events Manager) — Lorena / LCOAdv. Remova ou esvazie após validar.
+TEST_EVENT_CODE = "TEST7356"
 # Retornar detalhes da Meta em erros HTTP (desligado em produção por omissão)
 EXPOSE_META_ERRORS = "false"
 
