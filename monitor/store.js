@@ -1,5 +1,6 @@
 const RING_KEY = "meta_capi_monitor_ring_v1";
 const RING_MAX = 120;
+const memoryRing = [];
 
 /**
  * @param {string | undefined} url
@@ -15,6 +16,8 @@ function truncateUrl(url, max) {
  * @param {object} entry
  */
 export async function appendMonitorEvent(kv, entry) {
+  memoryRing.unshift(entry);
+  if (memoryRing.length > RING_MAX) memoryRing.length = RING_MAX;
   if (!kv) return;
   try {
     const raw = await kv.get(RING_KEY);
@@ -34,7 +37,7 @@ export async function appendMonitorEvent(kv, entry) {
  * @param {object} entry
  */
 export function scheduleMonitorLog(ctx, kv, entry) {
-  if (!kv || !ctx) return;
+  if (!ctx) return;
   ctx.waitUntil(appendMonitorEvent(kv, entry));
 }
 
@@ -54,7 +57,7 @@ export function logMonitor(ctx, env, partial) {
  */
 export async function listMonitorEvents(kv) {
   if (!kv) {
-    return { ok: true, kv_configured: false, items: [] };
+    return { ok: true, kv_configured: false, items: memoryRing.slice() };
   }
   const raw = await kv.get(RING_KEY);
   if (!raw) return { ok: true, kv_configured: true, items: [] };

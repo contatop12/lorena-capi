@@ -51,6 +51,16 @@ export function maskEmail(email) {
 }
 
 /**
+ * @param {string} phone
+ */
+export function maskPhone(phone) {
+  if (!phone || typeof phone !== "string") return "";
+  const d = phone.replace(/[^\d]/g, "");
+  if (d.length < 8) return "";
+  return d.slice(0, 2) + "*****" + d.slice(-3);
+}
+
+/**
  * E-mail de monitoramento: custom_data (Lead) ou `monitor.email` (opcional, explícito).
  * @param {object | null | undefined} body
  * @returns {string}
@@ -70,6 +80,34 @@ export function pickEmailForMonitor(body) {
 }
 
 /**
+ * @param {object | null | undefined} body
+ */
+function pickPhoneForMonitor(body) {
+  if (!body || typeof body !== "object") return "";
+  const c = body.custom_data;
+  if (c && typeof c === "object" && !Array.isArray(c)) {
+    if (typeof c.phone === "string") return c.phone.trim();
+    if (typeof c.telefone === "string") return c.telefone.trim();
+    if (typeof c.whatsapp === "string") return c.whatsapp.trim();
+  }
+  return "";
+}
+
+/**
+ * @param {object | null | undefined} body
+ */
+function pickNameForMonitor(body) {
+  if (!body || typeof body !== "object") return "";
+  const c = body.custom_data;
+  if (c && typeof c === "object" && !Array.isArray(c)) {
+    if (typeof c.name === "string") return c.name.trim();
+    if (typeof c.nome === "string") return c.nome.trim();
+    if (typeof c.full_name === "string") return c.full_name.trim();
+  }
+  return "";
+}
+
+/**
  * @param {Request} request
  * @param {object | null} body
  * @param {Record<string, unknown>} base campos mínimos do log (ts é aplicado em logMonitor)
@@ -82,6 +120,8 @@ export function buildMonitorExtras(request, body, base) {
       ? body.client_context
       : {};
   const em = pickEmailForMonitor(body || /** @type {any} */ ({}));
+  const phone = pickPhoneForMonitor(body || /** @type {any} */ ({}));
+  const leadName = pickNameForMonitor(body || /** @type {any} */ ({}));
   let pixelStatus = "unknown";
   if (cc.pixel_status === "blocked" || cc.pixel_status === "inactive") pixelStatus = cc.pixel_status;
   else if (cc.meta_pixel_loaded === true || cc.pixel_status === "active") pixelStatus = "active";
@@ -92,6 +132,8 @@ export function buildMonitorExtras(request, body, base) {
     bot: p.bot,
     browser_os: p.browser + " / " + p.os + (p.mobile ? " (M)" : ""),
     email_masked: em ? maskEmail(em) : "",
+    phone_masked: phone ? maskPhone(phone) : "",
+    lead_name: leadName || "",
     pixel_status: pixelStatus,
     fbp_source: typeof cc.fbp_source === "string" ? cc.fbp_source : "",
     ad_block_suspected: cc.ad_block_suspected === true,

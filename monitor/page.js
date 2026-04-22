@@ -250,7 +250,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
           <tr>
             <th>Horário</th>
             <th>Evento</th>
-            <th>E-mail</th>
+            <th>Contato</th>
             <th>Meta CAPI</th>
             <th>Pixel (sinal)</th>
             <th>Browser / SO</th>
@@ -429,7 +429,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
             ? '<span class="evt-pill">' + esc(en) + "</span>"
             : "<span class=\"status-err\">" + esc(e.error || "—") + "</span>") +
           "</td>" +
-          "<td>" + esc(e.email_masked || "—") + "</td>" +
+          "<td>" +
+          esc(e.email_masked || "—") +
+          (e.phone_masked ? "<br><small style=\"color:var(--muted)\">" + esc(e.phone_masked) + "</small>" : "") +
+          (e.lead_name ? "<br><small style=\"color:var(--muted)\">" + esc(e.lead_name) + "</small>" : "") +
+          "</td>" +
           '<td><span class="row-dot"><span class="dot ' + (okM ? "dot-ok" : "dot-err") + '"></span>' + (okM ? "OK" : esc(e.error || "Falha")) + "</span></td>" +
           '<td><span class="' + esc(px.cls) + '">' + esc(px.t) + "</span></td>" +
           "<td>" + esc(e.browser_os || (e.browser && e.os ? e.browser + " / " + e.os : "—")) + "</td>" +

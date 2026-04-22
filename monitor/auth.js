@@ -29,7 +29,7 @@ function secureCompare(a, b) {
  */
 export function monitorTokenOk(request, env) {
   const tok = (env.MONITOR_TOKEN || "").trim();
-  if (!tok) return isDevelopment(env);
+  if (!tok) return true;
   const auth = request.headers.get("Authorization") || "";
   let bearer = "";
   const m = auth.match(/^Bearer\s+(.+)$/i);

@@ -167,6 +167,8 @@ const TRACKER_JS = `(function (global) {
   else init();
 })(typeof window !== "undefined" ? window : this);
 `;
+const HEX64_RE = /^[a-f0-9]{64}$/i;
+const HASH_USER_KEYS = ["em", "ph", "fn", "ln", "ct", "st", "zp", "country", "external_id"];
 
 export default {
   /**
@@ -495,12 +497,7 @@ async function handleCollect(request, env, ctx) {
   const ua = (request.headers.get("User-Agent") || "").trim();
 
   const incomingUser = body.user_data && typeof body.user_data === "object" ? body.user_data : {};
-
-  const userData = {
-    ...incomingUser,
-    client_ip_address: incomingUser.client_ip_address || ip || undefined,
-    client_user_agent: incomingUser.client_user_agent || ua || undefined,
-  };
+  const userData = await prepareUserData(incomingUser, ip, ua);
 
   const serverEvent = {
     event_name: eventName,
@@ -606,4 +603,65 @@ async function handleCollect(request, env, ctx) {
 function exposeMetaErrors(env) {
   const v = (env.EXPOSE_META_ERRORS || "").toLowerCase();
   return v === "true" || v === "1" || v === "yes";
+}
+
+/**
+ * @param {string} key
+ * @param {unknown} value
+ */
+function normalizeForHash(key, value) {
+  if (typeof value !== "string") return "";
+  const raw = value.trim();
+  if (!raw) return "";
+  if (key === "em") return raw.toLowerCase();
+  if (key === "ph") return raw.replace(/[^\d]/g, "");
+  if (key === "country") return raw.toLowerCase();
+  if (key === "zp") return raw.replace(/\s+/g, "");
+  return raw.toLowerCase();
+}
+
+/**
+ * @param {string} value
+ */
+async function sha256Hex(value) {
+  const msg = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", msg);
+  const bytes = Array.from(new Uint8Array(digest));
+  return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Normaliza e hasheia user_data avançado (EMQ), preservando fbp/fbc/ip/ua.
+ * @param {Record<string, unknown>} incomingUser
+ * @param {string} ip
+ * @param {string} ua
+ */
+async function prepareUserData(incomingUser, ip, ua) {
+  const out = {};
+
+  // Chaves que não devem ser hash.
+  const direct = ["fbp", "fbc", "fb_login_id", "client_ip_address", "client_user_agent"];
+  for (const k of direct) {
+    if (typeof incomingUser[k] === "string" && incomingUser[k].trim()) {
+      out[k] = incomingUser[k].trim();
+    }
+  }
+
+  out.client_ip_address = out.client_ip_address || ip || undefined;
+  out.client_user_agent = out.client_user_agent || ua || undefined;
+
+  // Chaves que melhoram EMQ e devem estar em hash SHA-256.
+  for (const k of HASH_USER_KEYS) {
+    const v = incomingUser[k];
+    if (typeof v !== "string" || !v.trim()) continue;
+    if (HEX64_RE.test(v.trim())) {
+      out[k] = v.trim().toLowerCase();
+      continue;
+    }
+    const normalized = normalizeForHash(k, v);
+    if (!normalized) continue;
+    out[k] = await sha256Hex(normalized);
+  }
+
+  return out;
 }
