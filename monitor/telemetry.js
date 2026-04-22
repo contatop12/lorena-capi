@@ -76,6 +76,11 @@ export function pickEmailForMonitor(body) {
     if (typeof c.email === "string" && c.email.indexOf("@") > 0) return c.email.trim();
     if (typeof c.user_email === "string" && c.user_email.indexOf("@") > 0) return c.user_email.trim();
   }
+  const u = body.user_data;
+  if (u && typeof u === "object" && !Array.isArray(u)) {
+    if (typeof u.em === "string" && u.em.indexOf("@") > 0) return u.em.trim();
+    if (typeof u.email === "string" && u.email.indexOf("@") > 0) return u.email.trim();
+  }
   return "";
 }
 
@@ -90,6 +95,11 @@ function pickPhoneForMonitor(body) {
     if (typeof c.telefone === "string") return c.telefone.trim();
     if (typeof c.whatsapp === "string") return c.whatsapp.trim();
   }
+  const u = body.user_data;
+  if (u && typeof u === "object" && !Array.isArray(u)) {
+    if (typeof u.ph === "string") return u.ph.trim();
+    if (typeof u.phone === "string") return u.phone.trim();
+  }
   return "";
 }
 
@@ -103,6 +113,14 @@ function pickNameForMonitor(body) {
     if (typeof c.name === "string") return c.name.trim();
     if (typeof c.nome === "string") return c.nome.trim();
     if (typeof c.full_name === "string") return c.full_name.trim();
+  }
+  const u = body.user_data;
+  if (u && typeof u === "object" && !Array.isArray(u)) {
+    const fn = typeof u.fn === "string" ? u.fn.trim() : "";
+    const ln = typeof u.ln === "string" ? u.ln.trim() : "";
+    const full = (fn + " " + ln).trim();
+    if (full) return full;
+    if (typeof u.name === "string") return u.name.trim();
   }
   return "";
 }

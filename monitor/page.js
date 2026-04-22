@@ -317,7 +317,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       return;
     }
     leadRows.innerHTML = leads.map(function (l) {
-      var c = esc(l.email_masked || "—");
+      var c = esc(l.lead_email || l.email_masked || "—");
       if (l.phone_masked) c += '<br><small class="muted">' + esc(l.phone_masked) + "</small>";
       if (l.lead_name) c += '<br><small class="muted">' + esc(l.lead_name) + "</small>";
       return (
@@ -339,12 +339,22 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       return;
     }
     corRows.innerHTML = rows.map(function (c) {
-      var sCls = c.status === "confirmed" ? "ok" : c.status === "failed" ? "err" : "warn";
-      var sTxt = c.status === "confirmed" ? "Confirmado" : c.status === "failed" ? "Falhou" : "Pendente";
+      var sCls = c.status === "deduplicated" ? "ok" : c.status === "failed" ? "err" : "warn";
+      var sTxt =
+        c.status === "deduplicated"
+          ? "Desduplicado"
+          : c.status === "validated_capi"
+            ? "CAPI validado"
+            : c.status === "failed"
+              ? "Falhou"
+              : "Pendente";
       return (
         "<tr>" +
         '<td class="mono">' + esc(c.event_id || "—") + "</td>" +
-        "<td>" + esc(c.lead_name || "—") + (c.email_masked ? '<br><small class="muted">' + esc(c.email_masked) + "</small>" : "") + "</td>" +
+        "<td>" +
+        esc(c.lead_name || "—") +
+        ((c.lead_email || c.email_masked) ? '<br><small class="muted">' + esc(c.lead_email || c.email_masked) + "</small>" : "") +
+        "</td>" +
         '<td class="' + sCls + '">' + sTxt + "</td>" +
         "<td>" + esc(c.event_name || "Lead") + (c.capi_error ? '<br><small class="err">' + esc(c.capi_error) + "</small>" : "") + "</td>" +
         "<td class='mono'>" + esc(fmtTs(c.lead_ts)) + (c.capi_ts ? "<br>" + esc(fmtTs(c.capi_ts)) : "") + "</td>" +

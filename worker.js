@@ -529,6 +529,19 @@ async function handleCollect(request, env, ctx) {
   const testCode = (env.TEST_EVENT_CODE || "").trim();
   if (testCode) graphBody.test_event_code = testCode;
 
+  // Marca a entrada no pipeline CAPI antes da validação da Meta.
+  logMonitor(
+    ctx,
+    env,
+    buildMonitorExtras(request, body, {
+      event_name: eventName,
+      event_id: serverEvent.event_id || null,
+      ok: null,
+      error: undefined,
+      detail: "capi_received",
+    }),
+  );
+
   let metaRes;
   try {
     metaRes = await fetch(graphUrl, {
@@ -679,6 +692,7 @@ async function handleWebhookLead(request, env, ctx) {
     detail: "lead_webhook",
     lead_source: leadSource,
     lead_name: leadName,
+    lead_email: email,
     email_masked: email ? maskEmail(email) : "",
     phone_masked: phone ? maskPhone(phone) : "",
     page_url: truncateUrl(pageUrl, 120),
