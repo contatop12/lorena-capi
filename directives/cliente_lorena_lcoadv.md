@@ -21,9 +21,15 @@ Um **token de acesso Meta** foi compartilhado em canal não seguro. Trate-o como
 
 Se o site também atender em `https://lcoadv.com.br` (sem `www`), inclua as **duas** origens em `ALLOWED_ORIGINS`, separadas por vírgula, para evitar bloqueio de CORS.
 
+## Plugin Cloudflare no Cursor (MCP) — o que dá para fazer daqui
+
+Foi possível **listar a conta** (`Suporte@p12digital.com.br`) e o script **`conversao-api-meta`**, além de **ler o código** implantado. O MCP **não expõe** operações para gravar **Variables**, **Secrets** nem “Bindings” de texto no Worker — isso continua no [painel](https://dash.cloudflare.com/) ou via **Wrangler** (recomendado abaixo).
+
+Documentação oficial de secrets: [Workers Secrets](https://developers.cloudflare.com/workers/configuration/secrets/).
+
 ## Cloudflare Workers — o que configurar no painel
 
-Como no deploy os **Bindings** aparecem em zero, defina no Worker:
+Na visão **Bindings** do diagrama, **KV / D1 / R2** aparecem como zero — é normal. O que você precisa está em **Settings → Variables and Secrets** (texto + secret). Defina:
 
 ### Variáveis (plain text)
 
@@ -37,6 +43,16 @@ Como no deploy os **Bindings** aparecem em zero, defina no Worker:
 ### Secret
 
 - `META_ACCESS_TOKEN` = **apenas** via **Encrypt** / tipo Secret no painel (ou `wrangler secret put META_ACCESS_TOKEN` de forma interativa, sem colar o token no histórico do terminal).
+
+### Alternativa: Wrangler na sua máquina (aplica `[vars]` do `wrangler.toml`)
+
+Com o repositório já com `wrangler.toml` preenchido (pixel, CORS, `TEST_EVENT_CODE`, etc.):
+
+1. `npx wrangler login`
+2. `npx wrangler secret put META_ACCESS_TOKEN` (cole o token **novo** quando pedir)
+3. `npx wrangler deploy` — envia o código **e** as variáveis públicas de `[vars]` para o Worker `conversao-api-meta`
+
+O secret **não** fica no `wrangler.toml`; só no passo 2.
 
 ### Observabilidade
 

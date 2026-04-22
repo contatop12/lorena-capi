@@ -12,6 +12,23 @@ name = "conversao-api-meta"
 main = "worker.js"
 compatibility_date = "2024-10-01"
 
+# Observabilidade — mesma estrutura em todas as implantações (Wrangler / Git / CI).
+# Documentação: https://developers.cloudflare.com/workers/wrangler/configuration/#observability
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = false
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+persist = true
+head_sampling_rate = 1
+
 # Variáveis públicas de configuração (por cliente / ambiente)
 # Cliente ativo: Lorena / LCOAdv — ver directives/cliente_lorena_lcoadv.md
 [vars]
