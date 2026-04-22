@@ -82,6 +82,7 @@
   }
 
   function ensureFbpFbc() {
+    var hadFbp = !!getCookie("_fbp");
     var fbp = getCookie("_fbp");
     if (!fbp) {
       fbp = newFbp();
@@ -95,7 +96,9 @@
       setCookie("_fbc", fbc, COOKIE_MAX_AGE);
       debug("_fbc atualizado a partir de fbclid");
     }
-    return { fbp: fbp, fbc: fbc || "" };
+    /* fbp_source: aprox. — "cookie_antes" = já existia (p.ex. pixel Meta); "tracker_novo" = cookie criado aqui */
+    var fbpSource = hadFbp ? "cookie_antes" : "tracker_novo";
+    return { fbp: fbp, fbc: fbc || "", fbp_source: fbpSource };
   }
 
   function resolveEndpoint() {
@@ -159,6 +162,20 @@
     var custom = eventData.custom_data || eventData.customData || {};
     var extraUser = eventData.user_data || eventData.userData || {};
 
+    var hasFbq = typeof global.fbq === "function";
+    var clientCtx = {
+      fbp_source: ids.fbp_source,
+      meta_pixel_loaded: hasFbq,
+      pixel_status: hasFbq ? "active" : "unknown",
+    };
+    var exCtx = eventData.client_context;
+    if (exCtx && typeof exCtx === "object") {
+      for (var ck in exCtx) {
+        if (Object.prototype.hasOwnProperty.call(exCtx, ck)) {
+          clientCtx[ck] = exCtx[ck];
+        }
+      }
+    }
     return {
       schema: "meta-capi-v1",
       event_name: String(eventName || "PageView"),
@@ -176,6 +193,7 @@
         },
         typeof extraUser === "object" && extraUser ? extraUser : {}
       ),
+      client_context: clientCtx,
     };
   }
 

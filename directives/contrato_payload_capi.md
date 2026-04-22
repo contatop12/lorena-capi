@@ -19,6 +19,10 @@
 | `action_source` | string | sim | Fixo: `website` |
 | `custom_data` | object | não | Campos do evento (valor, moeda, contents, etc.) |
 | `user_data` | object | não | `fbp`, `fbc`, hashes (`em`, `ph`, …). O Worker completa `client_ip_address` e `client_user_agent` a partir da requisição HTTP se necessário |
+| `client_context` | object | não | **Não** é enviado à Meta. Usado no painel: `fbp_source`, `meta_pixel_loaded`, `pixel_status`, `ad_block_suspected` (se o site detectar e passar) |
+| `monitor` | object | não | **Não** é enviado à Meta. Opcional: `email` explícito para o painel (mascarado). Preferir e-mail de conversão em `custom_data` |
+
+O `tracker.js` envia `client_context` automaticamente. Eventos manuais podem mesclar, por exemplo: `MetaTracker.track("Lead", { custom_data: { email: "…" }, client_context: { ad_block_suspected: true } })`.
 
 ## O que o Worker adiciona / prioriza
 

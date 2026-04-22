@@ -14,6 +14,13 @@ name = "conversao-api-meta"
 main = "worker.js"
 compatibility_date = "2024-10-01"
 
+# Mantém URL *.workers.dev (alinhado ao que costuma estar ativo no Dashboard).
+workers_dev = true
+preview_urls = true
+
+# Domínio customizado — espelha o que está no Dashboard (zona explícita evita diff no deploy).
+routes = [{ pattern = "validacao.lcoadv.com.br", zone_name = "lcoadv.com.br", custom_domain = true }]
+
 # Observabilidade — mesma estrutura em todas as implantações (Wrangler / Git / CI).
 # Documentação: https://developers.cloudflare.com/workers/wrangler/configuration/#observability
 [observability]

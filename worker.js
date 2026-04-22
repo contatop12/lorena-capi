@@ -8,6 +8,7 @@
  * Contrato: directives/contrato_payload_capi.md
  */
 import { handleMonitorRequest } from "./monitor/router.js";
+import { buildMonitorExtras } from "./monitor/telemetry.js";
 import { logMonitor, truncateUrl } from "./monitor/store.js";
 
 export default {
@@ -198,13 +199,17 @@ const MAX_EVENT_NAME_LEN = 128;
 async function handleCollect(request, env, ctx) {
   const ct = request.headers.get("Content-Type") || "";
   if (!ct.toLowerCase().includes("application/json")) {
-    logMonitor(ctx, env, {
-      event_name: null,
-      event_id: null,
-      ok: false,
-      error: "unsupported_media_type",
-      detail: "Content-Type",
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, null, {
+        event_name: null,
+        event_id: null,
+        ok: false,
+        error: "unsupported_media_type",
+        detail: "Content-Type",
+      }),
+    );
     return jsonResponse(request, env, 415, { ok: false, error: "unsupported_media_type" });
   }
 
@@ -213,13 +218,17 @@ async function handleCollect(request, env, ctx) {
   const apiVersion = (env.META_API_VERSION || "v21.0").trim().replace(/^v?/, "v");
 
   if (!pixelId || !token) {
-    logMonitor(ctx, env, {
-      event_name: null,
-      event_id: null,
-      ok: false,
-      error: "missing_env",
-      detail: "PIXEL_ID ou META_ACCESS_TOKEN",
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, null, {
+        event_name: null,
+        event_id: null,
+        ok: false,
+        error: "missing_env",
+        detail: "PIXEL_ID ou META_ACCESS_TOKEN",
+      }),
+    );
     return jsonResponse(request, env, 500, {
       ok: false,
       error: "missing_env",
@@ -229,13 +238,17 @@ async function handleCollect(request, env, ctx) {
 
   const rawText = await request.text();
   if (rawText.length > MAX_BODY_BYTES) {
-    logMonitor(ctx, env, {
-      event_name: null,
-      event_id: null,
-      ok: false,
-      error: "payload_too_large",
-      detail: "corpo > limite",
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, null, {
+        event_name: null,
+        event_id: null,
+        ok: false,
+        error: "payload_too_large",
+        detail: "corpo > limite",
+      }),
+    );
     return jsonResponse(request, env, 413, { ok: false, error: "payload_too_large" });
   }
 
@@ -243,46 +256,62 @@ async function handleCollect(request, env, ctx) {
   try {
     body = JSON.parse(rawText || "{}");
   } catch {
-    logMonitor(ctx, env, {
-      event_name: null,
-      event_id: null,
-      ok: false,
-      error: "invalid_json",
-      detail: "JSON inválido",
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, null, {
+        event_name: null,
+        event_id: null,
+        ok: false,
+        error: "invalid_json",
+        detail: "JSON inválido",
+      }),
+    );
     return jsonResponse(request, env, 500, { ok: false, error: "invalid_json" });
   }
 
   if (!body || typeof body !== "object") {
-    logMonitor(ctx, env, {
-      event_name: null,
-      event_id: null,
-      ok: false,
-      error: "empty_body",
-      detail: "corpo vazio",
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, null, {
+        event_name: null,
+        event_id: null,
+        ok: false,
+        error: "empty_body",
+        detail: "corpo vazio",
+      }),
+    );
     return jsonResponse(request, env, 500, { ok: false, error: "empty_body" });
   }
 
   const eventName = body.event_name;
   if (!eventName || typeof eventName !== "string") {
-    logMonitor(ctx, env, {
-      event_name: null,
-      event_id: typeof body.event_id === "string" ? body.event_id : null,
-      ok: false,
-      error: "missing_event_name",
-      detail: truncateUrl(body.event_source_url, 72) || "—",
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, body, {
+        event_name: null,
+        event_id: typeof body.event_id === "string" ? body.event_id : null,
+        ok: false,
+        error: "missing_event_name",
+        detail: truncateUrl(body.event_source_url, 72) || "—",
+      }),
+    );
     return jsonResponse(request, env, 500, { ok: false, error: "missing_event_name" });
   }
   if (eventName.length > MAX_EVENT_NAME_LEN) {
-    logMonitor(ctx, env, {
-      event_name: eventName,
-      event_id: typeof body.event_id === "string" ? body.event_id : null,
-      ok: false,
-      error: "event_name_too_long",
-      detail: truncateUrl(body.event_source_url, 72),
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, body, {
+        event_name: eventName,
+        event_id: typeof body.event_id === "string" ? body.event_id : null,
+        ok: false,
+        error: "event_name_too_long",
+        detail: truncateUrl(body.event_source_url, 72),
+      }),
+    );
     return jsonResponse(request, env, 500, { ok: false, error: "event_name_too_long" });
   }
 
@@ -325,13 +354,17 @@ async function handleCollect(request, env, ctx) {
       body: JSON.stringify(graphBody),
     });
   } catch (e) {
-    logMonitor(ctx, env, {
-      event_name: eventName,
-      event_id: serverEvent.event_id || null,
-      ok: false,
-      error: "meta_fetch_failed",
-      detail: truncateUrl(serverEvent.event_source_url, 72),
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, body, {
+        event_name: eventName,
+        event_id: serverEvent.event_id || null,
+        ok: false,
+        error: "meta_fetch_failed",
+        detail: truncateUrl(serverEvent.event_source_url, 72),
+      }),
+    );
     return jsonResponse(request, env, 500, {
       ok: false,
       error: "meta_fetch_failed",
@@ -348,13 +381,17 @@ async function handleCollect(request, env, ctx) {
   }
 
   if (!metaRes.ok) {
-    logMonitor(ctx, env, {
-      event_name: eventName,
-      event_id: serverEvent.event_id || null,
-      ok: false,
-      error: "meta_api_error",
-      detail: "HTTP " + metaRes.status + " · " + truncateUrl(serverEvent.event_source_url, 48),
-    });
+    logMonitor(
+      ctx,
+      env,
+      buildMonitorExtras(request, body, {
+        event_name: eventName,
+        event_id: serverEvent.event_id || null,
+        ok: false,
+        error: "meta_api_error",
+        detail: "HTTP " + metaRes.status + " · " + truncateUrl(serverEvent.event_source_url, 48),
+      }),
+    );
     const payload = {
       ok: false,
       error: "meta_api_error",
@@ -366,15 +403,19 @@ async function handleCollect(request, env, ctx) {
 
   const received =
     metaJson && typeof metaJson.events_received === "number" ? metaJson.events_received : undefined;
-  logMonitor(ctx, env, {
-    event_name: eventName,
-    event_id: serverEvent.event_id || null,
-    ok: true,
-    error: undefined,
-    detail:
-      (received != null ? "events_received=" + received + " · " : "") +
-      truncateUrl(serverEvent.event_source_url, 64),
-  });
+  logMonitor(
+    ctx,
+    env,
+    buildMonitorExtras(request, body, {
+      event_name: eventName,
+      event_id: serverEvent.event_id || null,
+      ok: true,
+      error: undefined,
+      detail:
+        (received != null ? "events_received=" + received + " · " : "") +
+        truncateUrl(serverEvent.event_source_url, 64),
+    }),
+  );
 
   return jsonResponse(request, env, 200, {
     ok: true,
