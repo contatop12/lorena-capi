@@ -131,12 +131,130 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     .ok { color: var(--ok); font-weight: 600; }
     .err { color: var(--err); font-weight: 600; }
     .warn { color: var(--warn); font-weight: 600; }
+    .status-cell { white-space: nowrap; }
+    .semaphore {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.38rem;
+    }
+    .dot {
+      width: 0.54rem;
+      height: 0.54rem;
+      border-radius: 999px;
+      display: inline-block;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.04);
+    }
+    .dot.ok { background: var(--ok); }
+    .dot.err { background: var(--err); }
+    .dot.warn { background: var(--warn); }
+    .row-ok td:first-child { border-left: 2px solid rgba(61, 220, 132, 0.8); }
+    .row-err td:first-child { border-left: 2px solid rgba(255, 77, 109, 0.8); }
+    .row-warn td:first-child { border-left: 2px solid rgba(251, 191, 119, 0.8); }
+    button.detail-btn {
+      padding: 0.32rem 0.5rem;
+      font-size: 0.66rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    button.detail-btn[disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     .mono { font-variant-numeric: tabular-nums; }
     .muted { color: var(--muted); }
     .empty { color: var(--muted); padding: 1.3rem; text-align: center; }
     dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); }
     dialog::backdrop { background: rgba(0,0,0,0.65); }
     dialog input { width: 100%; margin-top: 0.5rem; border: 1px solid var(--line); border-radius: 6px; background: #090a0d; color: var(--text); padding: 0.5rem; }
+    .detail-wrap {
+      width: min(96vw, 980px);
+      max-height: 85vh;
+      overflow: auto;
+      padding: 0.9rem;
+    }
+    .detail-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      margin-bottom: 0.6rem;
+    }
+    .detail-title {
+      margin: 0;
+      font-size: 0.86rem;
+      letter-spacing: 0.03em;
+    }
+    .detail-meta {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 0.62rem 0.7rem;
+      background: rgba(255,255,255,0.01);
+      margin-bottom: 0.62rem;
+      font-size: 0.7rem;
+      line-height: 1.5;
+    }
+    .timeline-note {
+      margin: 0 0 0.44rem;
+      color: var(--muted);
+      font-size: 0.67rem;
+    }
+    .week-chart {
+      padding: 0.72rem;
+    }
+    .week-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      font-size: 0.64rem;
+      color: var(--muted);
+      margin-bottom: 0.55rem;
+    }
+    .week-legend .dot {
+      width: 0.46rem;
+      height: 0.46rem;
+      margin-right: 0.3rem;
+      box-shadow: none;
+    }
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(68px, 1fr));
+      gap: 0.4rem;
+      align-items: end;
+      min-height: 120px;
+    }
+    .week-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.34rem;
+    }
+    .week-bars {
+      width: 100%;
+      height: 84px;
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      gap: 0.12rem;
+    }
+    .week-bar {
+      width: 0.54rem;
+      min-height: 0;
+      border-radius: 3px 3px 0 0;
+      opacity: 0.95;
+    }
+    .week-bar.ok { background: var(--ok); }
+    .week-bar.err { background: var(--err); }
+    .week-bar.warn { background: var(--warn); }
+    .week-day {
+      font-size: 0.6rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .week-total {
+      font-size: 0.58rem;
+      color: #9ca3af;
+    }
   </style>
 </head>
 <body>
@@ -147,10 +265,15 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <main>
     <div id="banners"></div>
     <section class="kpis">
-      <article class="kpi"><div class="lbl">CAPI total</div><div class="val" id="kpiEventTotal">0</div></article>
-      <article class="kpi"><div class="lbl">CAPI sucesso</div><div class="val" id="kpiEventOk">0%</div></article>
+      <article class="kpi"><div class="lbl">CAPI em validação</div><div class="val" id="kpiEventTotal">0</div></article>
+      <article class="kpi"><div class="lbl">CAPI sucesso</div><div class="val" id="kpiEventOk">0</div></article>
       <article class="kpi"><div class="lbl">Leads webhook</div><div class="val" id="kpiLeadTotal">0</div></article>
-      <article class="kpi"><div class="lbl">Correlação confirmada</div><div class="val" id="kpiCorr">0</div></article>
+      <article class="kpi"><div class="lbl">Desduplicados</div><div class="val" id="kpiCorr">0</div></article>
+    </section>
+
+    <section class="card">
+      <h3>Comparativo semanal (7 dias)</h3>
+      <div id="weekChart" class="week-chart"><div class="empty">Carregando comparativo semanal...</div></div>
     </section>
 
     <div class="toolbar">
@@ -158,29 +281,15 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <select id="fEvent"><option value="all">Evento: todos</option></select>
       <select id="fStatus">
         <option value="all">Status: todos</option>
-        <option value="ok">Status: ok</option>
-        <option value="error">Status: erro</option>
+        <option value="pending">Status: em validação</option>
+        <option value="deduplicated">Status: desduplicado</option>
+        <option value="validated_capi">Status: CAPI validado</option>
+        <option value="failed">Status: falhou</option>
       </select>
       <div class="spacer"></div>
       <button id="btnRefresh">Atualizar</button>
       <button class="primary" id="btnAuto">Auto: ON</button>
     </div>
-
-    <section class="card">
-      <h3>Correlação lead -> CAPI</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>event_id</th>
-            <th>Lead</th>
-            <th>Status</th>
-            <th>CAPI</th>
-            <th>Horários</th>
-          </tr>
-        </thead>
-        <tbody id="corRows"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
-      </table>
-    </section>
 
     <section class="card">
       <h3>Leads recebidos (webhook)</h3>
@@ -210,23 +319,40 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
             <th>Contato</th>
             <th>Browser</th>
             <th>Detalhe</th>
+            <th>Ações</th>
           </tr>
         </thead>
-        <tbody id="eventRows"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+        <tbody id="eventRows"><tr><td colspan="8" class="empty">Carregando...</td></tr></tbody>
       </table>
     </section>
   </main>
+
+  <dialog id="eventDetailDialog">
+    <div class="detail-wrap">
+      <div class="detail-head">
+        <h3 class="detail-title" id="eventDetailTitle">Detalhes do evento</h3>
+        <button id="eventDetailClose">Fechar</button>
+      </div>
+      <div class="detail-meta" id="eventDetailMeta">Selecione um evento para visualizar.</div>
+      <p class="timeline-note">Timeline completa de monitoramento para o mesmo <code>event_id</code>.</p>
+      <div id="eventDetailTimeline"></div>
+    </div>
+  </dialog>
 
   <script>
 (function () {
   var banners = document.getElementById("banners");
   var eventRows = document.getElementById("eventRows");
   var leadRows = document.getElementById("leadRows");
-  var corRows = document.getElementById("corRows");
+  var weekChart = document.getElementById("weekChart");
+  var eventDetailDialog = document.getElementById("eventDetailDialog");
+  var eventDetailTitle = document.getElementById("eventDetailTitle");
+  var eventDetailMeta = document.getElementById("eventDetailMeta");
+  var eventDetailTimeline = document.getElementById("eventDetailTimeline");
   var fEvent = document.getElementById("fEvent");
   var fStatus = document.getElementById("fStatus");
   var btnAuto = document.getElementById("btnAuto");
-  var state = { events: [], leads: [], correlations: [], metrics: {} };
+  var state = { events: [], leads: [], correlations: [], metrics: {}, eventTimelines: {} };
   var autoTimer = null;
   var autoEnabled = true;
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
@@ -237,6 +363,25 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   }
   function statusCls(ok) { return ok === true ? "ok" : ok === false ? "err" : "warn"; }
   function statusTxt(ok) { return ok === true ? "OK" : ok === false ? "Erro" : "Pendente"; }
+  function capiStatusCls(status) {
+    if (status === "deduplicated" || status === "validated_capi") return "ok";
+    if (status === "failed") return "err";
+    return "warn";
+  }
+  function capiStatusTxt(status) {
+    if (status === "deduplicated") return "Desduplicado";
+    if (status === "validated_capi") return "CAPI validado";
+    if (status === "failed") return "Falhou";
+    return "Em validação";
+  }
+  function semaphore(ok) {
+    var cls = statusCls(ok);
+    return '<span class="semaphore"><span class="dot ' + cls + '"></span><span class="' + cls + '">' + statusTxt(ok) + "</span></span>";
+  }
+  function capiSemaphore(status) {
+    var cls = capiStatusCls(status);
+    return '<span class="semaphore"><span class="dot ' + cls + '"></span><span class="' + cls + '">' + capiStatusTxt(status) + "</span></span>";
+  }
 
   function renderBanners(data, err) {
     banners.innerHTML = "";
@@ -256,10 +401,10 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   }
 
   function renderMetrics(m) {
-    document.getElementById("kpiEventTotal").textContent = String(m.event_total || 0);
-    document.getElementById("kpiEventOk").textContent = String(m.capi_success_rate || 0) + "%";
+    document.getElementById("kpiEventTotal").textContent = String(m.event_pending || 0);
+    document.getElementById("kpiEventOk").textContent = String(m.event_ok || 0);
     document.getElementById("kpiLeadTotal").textContent = String(m.lead_total || 0);
-    document.getElementById("kpiCorr").textContent = String(m.correlation_confirmed || 0) + " / " + String(m.lead_total || 0);
+    document.getElementById("kpiCorr").textContent = String(m.event_deduplicated || 0);
   }
 
   function refreshEventFilter(events) {
@@ -280,8 +425,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     var st = fStatus.value || "all";
     return ev.filter(function (e) {
       if (eName !== "all" && e.event_name !== eName) return false;
-      if (st === "ok" && e.ok !== true) return false;
-      if (st === "error" && e.ok !== false) return false;
+      if (st !== "all" && (e.capi_status || "pending") !== st) return false;
       return true;
     });
   }
@@ -289,22 +433,26 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   function renderEvents() {
     var ev = filteredEvents();
     if (!ev.length) {
-      eventRows.innerHTML = '<tr><td colspan="7" class="empty">Sem eventos para os filtros atuais.</td></tr>';
+      eventRows.innerHTML = '<tr><td colspan="8" class="empty">Sem eventos para os filtros atuais.</td></tr>';
       return;
     }
     eventRows.innerHTML = ev.map(function (e) {
+      var capiStatus = e.capi_status || "pending";
+      var rowCls = "row-" + capiStatusCls(capiStatus);
+      var eventId = e.event_id ? String(e.event_id) : "";
       var contact = esc(e.email_masked || "—");
       if (e.phone_masked) contact += '<br><small class="muted">' + esc(e.phone_masked) + "</small>";
       if (e.lead_name) contact += '<br><small class="muted">' + esc(e.lead_name) + "</small>";
       return (
-        "<tr>" +
+        '<tr class="' + rowCls + '">' +
         '<td class="mono">' + esc(fmtTs(e.ts)) + "</td>" +
         "<td>" + (e.event_name ? '<span class="chip">' + esc(e.event_name) + "</span>" : esc(e.error || "—")) + "</td>" +
-        '<td class="' + statusCls(e.ok) + '">' + statusTxt(e.ok) + "</td>" +
+        '<td class="status-cell">' + capiSemaphore(capiStatus) + "</td>" +
         '<td class="mono">' + esc(e.event_id || "—") + "</td>" +
         "<td>" + contact + "</td>" +
         "<td>" + esc(e.browser_os || "—") + "</td>" +
         "<td>" + esc(e.detail || e.error || "—") + "</td>" +
+        '<td><button class="detail-btn" data-event-id="' + esc(eventId) + '"' + (eventId ? "" : " disabled") + ">Detalhes</button></td>" +
         "</tr>"
       );
     }).join("");
@@ -332,47 +480,118 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }).join("");
   }
 
-  function renderCorrelations() {
-    var rows = state.correlations || [];
-    if (!rows.length) {
-      corRows.innerHTML = '<tr><td colspan="5" class="empty">Sem correlação disponível ainda.</td></tr>';
+  function dayKey(ts) {
+    var d = new Date(Number(ts || Date.now()));
+    return String(d.getFullYear()) + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function dayLabel(key) {
+    var p = String(key || "").split("-");
+    return (p[2] || "--") + "/" + (p[1] || "--");
+  }
+  function renderWeekChart() {
+    var events = Array.isArray(state.events) ? state.events : [];
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+    var days = [];
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(now.getTime() - i * 86400000);
+      var key = String(d.getFullYear()) + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      days.push({ key: key, ok: 0, err: 0, warn: 0 });
+    }
+    var byKey = {};
+    days.forEach(function (d) { byKey[d.key] = d; });
+    events.forEach(function (e) {
+      var status = e.capi_status || "pending";
+      var key = dayKey(e.ts);
+      var slot = byKey[key];
+      if (!slot) return;
+      if (status === "failed") slot.err += 1;
+      else if (status === "deduplicated" || status === "validated_capi") slot.ok += 1;
+      else slot.warn += 1;
+    });
+    var maxV = 1;
+    days.forEach(function (d) {
+      maxV = Math.max(maxV, d.ok, d.err, d.warn);
+    });
+    var hasAny = days.some(function (d) { return d.ok > 0 || d.err > 0 || d.warn > 0; });
+    if (!hasAny) {
+      weekChart.innerHTML = '<div class="empty">Sem eventos CAPI nos últimos 7 dias.</div>';
       return;
     }
-    corRows.innerHTML = rows.map(function (c) {
-      var sCls = c.status === "deduplicated" ? "ok" : c.status === "failed" ? "err" : "warn";
-      var sTxt =
-        c.status === "deduplicated"
-          ? "Desduplicado"
-          : c.status === "validated_capi"
-            ? "CAPI validado"
-            : c.status === "failed"
-              ? "Falhou"
-              : "Pendente";
-      return (
-        "<tr>" +
-        '<td class="mono">' + esc(c.event_id || "—") + "</td>" +
-        "<td>" +
-        esc(c.lead_name || "—") +
-        ((c.lead_email || c.email_masked) ? '<br><small class="muted">' + esc(c.lead_email || c.email_masked) + "</small>" : "") +
-        "</td>" +
-        '<td class="' + sCls + '">' + sTxt + "</td>" +
-        "<td>" + esc(c.event_name || "Lead") + (c.capi_error ? '<br><small class="err">' + esc(c.capi_error) + "</small>" : "") + "</td>" +
-        "<td class='mono'>" + esc(fmtTs(c.lead_ts)) + (c.capi_ts ? "<br>" + esc(fmtTs(c.capi_ts)) : "") + "</td>" +
-        "</tr>"
-      );
-    }).join("");
+    weekChart.innerHTML =
+      '<div class="week-legend">' +
+      '<span><span class="dot ok"></span> Sucesso</span>' +
+      '<span><span class="dot warn"></span> Em validação</span>' +
+      '<span><span class="dot err"></span> Falhou</span>' +
+      "</div>" +
+      '<div class="week-grid">' +
+      days.map(function (d) {
+        var total = d.ok + d.err + d.warn;
+        var okH = d.ok > 0 ? Math.max(3, Math.round((d.ok / maxV) * 84)) : 0;
+        var warnH = d.warn > 0 ? Math.max(3, Math.round((d.warn / maxV) * 84)) : 0;
+        var errH = d.err > 0 ? Math.max(3, Math.round((d.err / maxV) * 84)) : 0;
+        return (
+          '<div class="week-col">' +
+          '<div class="week-bars">' +
+          '<span class="week-bar ok" title="Sucesso: ' + d.ok + '" style="height:' + okH + 'px"></span>' +
+          '<span class="week-bar warn" title="Em validação: ' + d.warn + '" style="height:' + warnH + 'px"></span>' +
+          '<span class="week-bar err" title="Falhou: ' + d.err + '" style="height:' + errH + 'px"></span>' +
+          "</div>" +
+          '<div class="week-day">' + dayLabel(d.key) + "</div>" +
+          '<div class="week-total">Total: ' + total + "</div>" +
+          "</div>"
+        );
+      }).join("") +
+      "</div>";
+  }
+
+  function renderEventDetails(eventId) {
+    var id = eventId ? String(eventId) : "";
+    var consolidated = (state.events || []).find(function (ev) { return String(ev.event_id || "") === id; }) || null;
+    var timeline =
+      state.eventTimelines &&
+      typeof state.eventTimelines === "object" &&
+      Array.isArray(state.eventTimelines[id])
+        ? state.eventTimelines[id]
+        : [];
+    var latest = timeline.length ? timeline[timeline.length - 1] : null;
+    var currentStatus = consolidated ? (consolidated.capi_status || "pending") : latest ? (latest.ok === true ? "validated_capi" : latest.ok === false ? "failed" : "pending") : "pending";
+    eventDetailTitle.textContent = "Detalhes do evento " + (id || "—");
+    eventDetailMeta.innerHTML =
+      "<strong>event_id:</strong> " + esc(id || "—") +
+      "<br><strong>Status atual:</strong> " + capiSemaphore(currentStatus) +
+      "<br><strong>Último evento:</strong> " + esc(latest ? (latest.event_name || latest.detail || latest.error || "—") : "—");
+    if (!timeline.length) {
+      eventDetailTimeline.innerHTML = '<div class="empty">Sem histórico de monitoramento para este event_id.</div>';
+      return;
+    }
+    eventDetailTimeline.innerHTML =
+      "<table><thead><tr><th>Horário</th><th>Tipo</th><th>Status</th><th>Evento</th><th>Detalhe</th></tr></thead><tbody>" +
+      timeline.map(function (item) {
+        return (
+          "<tr>" +
+          '<td class="mono">' + esc(fmtTs(item.ts)) + "</td>" +
+          "<td>" + esc(item.kind || "capi_event") + "</td>" +
+          '<td class="status-cell">' + semaphore(item.ok) + "</td>" +
+          "<td>" + esc(item.event_name || "—") + "</td>" +
+          "<td>" + esc(item.detail || item.error || "—") + "</td>" +
+          "</tr>"
+        );
+      }).join("") +
+      "</tbody></table>";
   }
 
   function paint(data) {
     state.events = Array.isArray(data.events) ? data.events : [];
     state.leads = Array.isArray(data.leads) ? data.leads : [];
     state.correlations = Array.isArray(data.correlations) ? data.correlations : [];
+    state.eventTimelines = data && typeof data.event_timelines === "object" && data.event_timelines ? data.event_timelines : {};
     state.metrics = data.metrics || {};
     renderMetrics(state.metrics);
+    renderWeekChart();
     refreshEventFilter(state.events);
     renderEvents();
     renderLeads();
-    renderCorrelations();
   }
 
   async function load() {
@@ -397,6 +616,19 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
   fEvent.onchange = renderEvents;
   fStatus.onchange = renderEvents;
+  document.addEventListener("click", function (ev) {
+    var btn = ev.target && ev.target.closest ? ev.target.closest("button[data-event-id]") : null;
+    if (!btn) return;
+    var eventId = btn.getAttribute("data-event-id") || "";
+    if (!eventId) return;
+    renderEventDetails(eventId);
+    if (eventDetailDialog && typeof eventDetailDialog.showModal === "function") {
+      eventDetailDialog.showModal();
+    }
+  });
+  document.getElementById("eventDetailClose").onclick = function () {
+    if (eventDetailDialog && typeof eventDetailDialog.close === "function") eventDetailDialog.close();
+  };
   document.getElementById("btnRefresh").onclick = load;
   btnAuto.onclick = function () {
     autoEnabled = !autoEnabled;

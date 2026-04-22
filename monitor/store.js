@@ -32,20 +32,35 @@ function normalizeItem(item) {
 function buildMonitorView(items) {
   const normalized = items.map((i) => normalizeItem(i)).sort((a, b) => asNum(b.ts) - asNum(a.ts));
   const leads = normalized.filter((i) => i.kind === "lead_capture");
-  const events = normalized.filter((i) => i.kind !== "lead_capture");
+  const eventsRaw = normalized.filter((i) => i.kind !== "lead_capture");
+  /** @type {Map<string, Record<string, unknown>[]>} */
+  const timelinesByEventId = new Map();
+  for (const item of normalized) {
+    const id = typeof item.event_id === "string" ? item.event_id : "";
+    if (!id) continue;
+    const current = timelinesByEventId.get(id) || [];
+    current.push(item);
+    timelinesByEventId.set(id, current);
+  }
 
   /** @type {Map<string, Record<string, unknown>>} */
   const eventById = new Map();
-  for (const ev of events) {
+  for (const ev of eventsRaw) {
     const id = typeof ev.event_id === "string" ? ev.event_id : "";
     if (!id || eventById.has(id)) continue;
     eventById.set(id, ev);
   }
-  const eventsWithoutId = events.filter((ev) => {
+  const eventsWithoutId = eventsRaw.filter((ev) => {
     const id = typeof ev.event_id === "string" ? ev.event_id : "";
     return !id;
   });
-  const latestEvents = Array.from(eventById.values()).concat(eventsWithoutId);
+  const consolidatedEvents = Array.from(eventById.values()).concat(eventsWithoutId);
+  const eventTimelines = Object.fromEntries(
+    Array.from(timelinesByEventId.entries()).map(([eventId, timeline]) => [
+      eventId,
+      timeline.slice().sort((a, b) => asNum(a.ts) - asNum(b.ts)),
+    ]),
+  );
   const usedFallbackEvents = new Set();
 
   const correlations = leads.map((lead) => {
@@ -57,7 +72,7 @@ function buildMonitorView(items) {
       const leadTs = asNum(lead.ts);
       const leadEmail = typeof lead.email_masked === "string" ? lead.email_masked : "";
       const leadPhone = typeof lead.phone_masked === "string" ? lead.phone_masked : "";
-      const candidate = latestEvents.find((item) => {
+      const candidate = consolidatedEvents.find((item) => {
         if (!item || item.ok !== true) return false;
         const itemId = typeof item.event_id === "string" ? item.event_id : "";
         if (itemId && usedFallbackEvents.has(itemId)) return false;
@@ -101,9 +116,37 @@ function buildMonitorView(items) {
       status,
     };
   });
+  const corrStatusWeight = {
+    pending: 1,
+    failed: 2,
+    validated_capi: 3,
+    deduplicated: 4,
+  };
+  /** @type {Map<string, string>} */
+  const corrStatusByEventId = new Map();
+  for (const c of correlations) {
+    const id = typeof c.event_id === "string" ? c.event_id : "";
+    if (!id) continue;
+    const next = typeof c.status === "string" ? c.status : "pending";
+    const prev = corrStatusByEventId.get(id);
+    if (!prev || (corrStatusWeight[next] || 0) > (corrStatusWeight[prev] || 0)) {
+      corrStatusByEventId.set(id, next);
+    }
+  }
+  const events = consolidatedEvents.map((ev) => {
+    const id = typeof ev.event_id === "string" ? ev.event_id : "";
+    let capiStatus = ev.ok === false ? "failed" : ev.ok === true ? "validated_capi" : "pending";
+    const corrStatus = id ? corrStatusByEventId.get(id) : undefined;
+    if (corrStatus === "deduplicated" || corrStatus === "validated_capi") {
+      capiStatus = corrStatus;
+    }
+    return Object.assign({}, ev, { capi_status: capiStatus });
+  });
 
-  const eventTotal = latestEvents.length;
-  const eventOk = latestEvents.filter((e) => e.ok === true).length;
+  const eventTotal = events.length;
+  const eventOk = events.filter((e) => e.ok === true).length;
+  const eventPending = events.filter((e) => e.capi_status === "pending").length;
+  const eventDeduplicated = events.filter((e) => e.capi_status === "deduplicated").length;
   const leadTotal = leads.length;
   const corrConfirmed = correlations.filter((c) => c.status === "deduplicated").length;
   const corrPending = correlations.filter((c) => c.status === "pending").length;
@@ -112,11 +155,15 @@ function buildMonitorView(items) {
   return {
     items: normalized,
     events,
+    events_raw: eventsRaw,
     leads,
     correlations,
+    event_timelines: eventTimelines,
     metrics: {
       event_total: eventTotal,
       event_ok: eventOk,
+      event_pending: eventPending,
+      event_deduplicated: eventDeduplicated,
       event_error: Math.max(0, eventTotal - eventOk),
       lead_total: leadTotal,
       correlation_confirmed: corrConfirmed,

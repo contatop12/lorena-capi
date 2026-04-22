@@ -558,7 +558,7 @@ async function handleCollect(request, env, ctx) {
         event_id: serverEvent.event_id || null,
         ok: false,
         error: "meta_fetch_failed",
-        detail: truncateUrl(serverEvent.event_source_url, 72),
+        detail: "meta_fetch_failed",
       }),
     );
     return jsonResponse(request, env, 500, {
@@ -585,7 +585,7 @@ async function handleCollect(request, env, ctx) {
         event_id: serverEvent.event_id || null,
         ok: false,
         error: "meta_api_error",
-        detail: "HTTP " + metaRes.status + " · " + truncateUrl(serverEvent.event_source_url, 48),
+        detail: "meta_api_error_http_" + metaRes.status,
       }),
     );
     const payload = {
@@ -607,9 +607,7 @@ async function handleCollect(request, env, ctx) {
       event_id: serverEvent.event_id || null,
       ok: true,
       error: undefined,
-      detail:
-        (received != null ? "events_received=" + received + " · " : "") +
-        truncateUrl(serverEvent.event_source_url, 64),
+      detail: "meta_api_ok" + (received != null ? " events_received=" + received : ""),
     }),
   );
 
