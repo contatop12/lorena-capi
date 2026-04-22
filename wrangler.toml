@@ -1,0 +1,30 @@
+# Cloudflare Worker — replicação por cliente: altere apenas variáveis / secrets.
+# Mapeamento .env ↔ Wrangler: directives/config_ambiente.md
+# Contrato JSON: directives/contrato_payload_capi.md
+# Chaves espelhadas em: .env.example e .dev.vars.example
+#
+# Segredo (não commitar valor real):
+#   wrangler secret put META_ACCESS_TOKEN
+#
+# Desenvolvimento local: copie .dev.vars.example para .dev.vars e preencha.
+
+name = "conversao-api-meta"
+main = "worker.js"
+compatibility_date = "2024-10-01"
+
+# Variáveis públicas de configuração (por cliente / ambiente)
+[vars]
+PIXEL_ID = ""
+META_API_VERSION = "v21.0"
+# Produção: lista explícita, ex.: https://www.cliente.com,https://cliente.com
+# Não deixe vazio nem * em produção (WORKER_ENV=production).
+ALLOWED_ORIGINS = ""
+# production = CORS estrito; development = permite * ou vazio em ALLOWED_ORIGINS
+WORKER_ENV = "production"
+# Opcional: código de teste da Meta (Events Manager). Remova em produção real.
+# TEST_EVENT_CODE = ""
+# Retornar detalhes da Meta em erros HTTP (desligado em produção por omissão)
+EXPOSE_META_ERRORS = "false"
+
+# META_ACCESS_TOKEN deve ser configurado via Dashboard ou:
+#   wrangler secret put META_ACCESS_TOKEN

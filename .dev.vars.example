@@ -1,0 +1,11 @@
+# Renomeie para .dev.vars para `wrangler dev` (não commitar .dev.vars)
+# Mesmas chaves que .env.example — espelho para desenvolvimento local do Worker.
+
+PIXEL_ID=
+META_ACCESS_TOKEN=
+META_API_VERSION=v21.0
+# Local: use development + * se precisar testar de qualquer origem
+WORKER_ENV=development
+ALLOWED_ORIGINS=*
+# TEST_EVENT_CODE=
+EXPOSE_META_ERRORS=true

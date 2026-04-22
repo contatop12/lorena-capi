@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Teste MetaTracker + Worker</title>
+    <!--
+      Uso: abra esta página via servidor estático (ou file://) e passe o Worker:
+        test-page.html?endpoint=http://127.0.0.1:8787/collect
+      Ajuste o src abaixo para o caminho real do tracker.js na sua máquina.
+    -->
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var ep = params.get("endpoint") || "http://127.0.0.1:8787/event";
+        window.__META_TRACKER_ENDPOINT__ = ep;
+        window.__META_TRACKER_DEBUG__ = true;
+      })();
+    </script>
+    <script src="../tracker.js" defer></script>
+  </head>
+  <body>
+    <p>Página mínima para validar <code>PageView</code> automático e CORS.</p>
+    <p>Endpoint atual: <code id="ep"></code></p>
+    <button type="button" id="lead">Disparar Lead (teste)</button>
+    <pre id="out"></pre>
+    <script>
+      document.getElementById("ep").textContent =
+        window.__META_TRACKER_ENDPOINT__ || "(não definido)";
+      document.getElementById("lead").onclick = function () {
+        window.MetaTracker.track("Lead", {
+          custom_data: { source: "test-page" },
+        }).then(
+          function (r) {
+            document.getElementById("out").textContent = JSON.stringify(r, null, 2);
+          },
+          function (e) {
+            document.getElementById("out").textContent = JSON.stringify(e, null, 2);
+          }
+        );
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+# Ambiente e segredos
+.env
+.dev.vars
+.venv/
+venv/
+env/
+
+# OAuth Google (AGENTS.md)
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Intermediários (regeneráveis)
+.tmp/*
+!.tmp/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
