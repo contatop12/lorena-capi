@@ -42,7 +42,7 @@ def main() -> int:
 
     pixel = (os.environ.get("PIXEL_ID") or "").strip()
     token = (os.environ.get("META_ACCESS_TOKEN") or "").strip()
-    version = (os.environ.get("META_API_VERSION") or "v21.0").strip()
+    version = (os.environ.get("META_API_VERSION") or "v25.0").strip()
     origins = (os.environ.get("ALLOWED_ORIGINS") or "").strip()
     worker_env = (os.environ.get("WORKER_ENV") or "production").strip().lower()
 

@@ -13,12 +13,19 @@ export async function handleMonitorRequest(request, env, jsonResponse) {
   const path = url.pathname.replace(/\/$/, "") || "/";
 
   if (request.method === "GET" && path === "/dashboard") {
+    const tok = (env.MONITOR_TOKEN || "").trim();
+    const cookie = tok
+      ? "meta_monitor_token=" +
+        encodeURIComponent(tok) +
+        "; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800"
+      : "meta_monitor_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
     return new Response(DASHBOARD_HTML, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-store",
         "Referrer-Policy": "no-referrer",
         "X-Content-Type-Options": "nosniff",
+        "Set-Cookie": cookie,
       },
     });
   }

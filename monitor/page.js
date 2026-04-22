@@ -162,8 +162,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         <option value="error">Status: erro</option>
       </select>
       <div class="spacer"></div>
-      <button class="primary" id="btnToken">Token monitor</button>
       <button id="btnRefresh">Atualizar</button>
+      <button class="primary" id="btnAuto">Auto: ON</button>
     </div>
 
     <section class="card">
@@ -217,33 +217,18 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     </section>
   </main>
 
-  <dialog id="dlg">
-    <form method="dialog" id="dlgForm" style="padding:1rem;min-width:20rem">
-      <strong style="font-family:Syne,sans-serif">Token do monitor</strong>
-      <p class="muted" style="font-size:0.74rem;margin:0.45rem 0 0">Mesmo valor de <code>MONITOR_TOKEN</code> no Worker.</p>
-      <input id="tokInput" type="password" placeholder="cole o token" />
-      <menu style="display:flex;gap:0.4rem;justify-content:flex-end;padding:0;margin-top:0.8rem">
-        <button type="button" id="dlgCancel">Cancelar</button>
-        <button class="primary" type="submit">Salvar</button>
-      </menu>
-    </form>
-  </dialog>
-
   <script>
 (function () {
-  var KEY = "meta_capi_monitor_token";
-  var dlg = document.getElementById("dlg");
-  var tokInput = document.getElementById("tokInput");
   var banners = document.getElementById("banners");
   var eventRows = document.getElementById("eventRows");
   var leadRows = document.getElementById("leadRows");
   var corRows = document.getElementById("corRows");
   var fEvent = document.getElementById("fEvent");
   var fStatus = document.getElementById("fStatus");
+  var btnAuto = document.getElementById("btnAuto");
   var state = { events: [], leads: [], correlations: [], metrics: {} };
-
-  function token() { try { return sessionStorage.getItem(KEY) || ""; } catch (_) { return ""; } }
-  function setToken(v) { try { sessionStorage.setItem(KEY, v); } catch (_) {} }
+  var autoTimer = null;
+  var autoEnabled = true;
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   function fmtTs(ts) {
     var n = Number(ts || Date.now());
@@ -382,13 +367,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 
   async function load() {
     var h = { Accept: "application/json" };
-    var t = token();
-    if (t) h.Authorization = "Bearer " + t;
     try {
       var res = await fetch("/api/monitor/events", { headers: h, credentials: "same-origin" });
       var data = await res.json().catch(function () { return {}; });
       if (res.status === 401) {
-        renderBanners(null, "Não autorizado (401). Configure MONITOR_TOKEN no painel.");
+        renderBanners(null, "Não autorizado (401). Verifique MONITOR_TOKEN no Worker e recarregue a página.");
         return;
       }
       if (!res.ok) {
@@ -405,10 +388,18 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   fEvent.onchange = renderEvents;
   fStatus.onchange = renderEvents;
   document.getElementById("btnRefresh").onclick = load;
-  document.getElementById("btnToken").onclick = function () { tokInput.value = token(); dlg.showModal(); };
-  document.getElementById("dlgCancel").onclick = function () { dlg.close(); };
-  document.getElementById("dlgForm").onsubmit = function () { setToken(tokInput.value.trim()); dlg.close(); load(); };
-  setInterval(load, 5000);
+  btnAuto.onclick = function () {
+    autoEnabled = !autoEnabled;
+    btnAuto.textContent = "Auto: " + (autoEnabled ? "ON" : "OFF");
+    if (autoEnabled) {
+      if (!autoTimer) autoTimer = setInterval(load, 5000);
+      load();
+    } else if (autoTimer) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+    }
+  };
+  autoTimer = setInterval(load, 5000);
   load();
 })();
   </script>

@@ -31,6 +31,23 @@ function secureCompare(a, b) {
 }
 
 /**
+ * @param {string} cookieHeader
+ * @param {string} key
+ */
+function readCookie(cookieHeader, key) {
+  if (!cookieHeader) return "";
+  const parts = cookieHeader.split(";");
+  for (const p of parts) {
+    const i = p.indexOf("=");
+    if (i < 0) continue;
+    const k = p.slice(0, i).trim();
+    if (k !== key) continue;
+    return decodeURIComponent(p.slice(i + 1).trim());
+  }
+  return "";
+}
+
+/**
  * @param {Request} request
  * @param {Record<string, string | undefined>} env
  */
@@ -43,8 +60,12 @@ export function monitorTokenOk(request, env) {
   if (m) bearer = m[1].trim();
   const header = request.headers.get("X-Monitor-Token") || "";
   const q = new URL(request.url).searchParams.get("token") || "";
+  const cookie = readCookie(request.headers.get("Cookie") || "", "meta_monitor_token");
   return (
-    secureCompare(tok, bearer) || secureCompare(tok, header) || secureCompare(tok, q)
+    secureCompare(tok, bearer) ||
+    secureCompare(tok, header) ||
+    secureCompare(tok, q) ||
+    secureCompare(tok, cookie)
   );
 }
 

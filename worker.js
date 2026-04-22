@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker — Meta Conversions API (CAPI), produção.
  * Variáveis: PIXEL_ID, META_ACCESS_TOKEN, META_API_VERSION, ALLOWED_ORIGINS,
- *   WORKER_ENV (production|development), TEST_EVENT_CODE (opcional),
+ *   WORKER_ENV (production|development), TEST_EVENT_CODE (opcional para debug),
  *   EXPOSE_META_ERRORS (true para retornar corpo Meta em erros).
  *   MONITOR_TOKEN (opcional, recomendado) — painel GET /dashboard e GET /api/monitor/events.
  *   WEBHOOK_TOKEN (opcional, recomendado) — POST /webhook/lead
@@ -403,7 +403,7 @@ async function handleCollect(request, env, ctx) {
 
   const pixelId = (env.PIXEL_ID || "").trim();
   const token = (env.META_ACCESS_TOKEN || "").trim();
-  const apiVersion = (env.META_API_VERSION || "v21.0").trim().replace(/^v?/, "v");
+  const apiVersion = (env.META_API_VERSION || "v25.0").trim().replace(/^v?/, "v");
 
   if (!pixelId || !token) {
     logMonitor(

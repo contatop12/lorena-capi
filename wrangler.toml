@@ -3,7 +3,7 @@
 # Contrato JSON: directives/contrato_payload_capi.md
 # Chaves espelhadas em: .env.example e .dev.vars.example
 # [vars] típicas: PIXEL_ID, META_API_VERSION, ALLOWED_ORIGINS, WORKER_ENV,
-#   TEST_EVENT_CODE, EXPOSE_META_ERRORS, WORKER_EVENT_URL
+#   EXPOSE_META_ERRORS, WORKER_EVENT_URL
 #
 # Segredo (não commitar valor real):
 #   npx wrangler secret put META_ACCESS_TOKEN
@@ -47,13 +47,11 @@ head_sampling_rate = 1
 # Cliente ativo: Lorena / LCOAdv — ver directives/cliente_lorena_lcoadv.md
 [vars]
 PIXEL_ID = "993975279878737"
-META_API_VERSION = "v21.0"
+META_API_VERSION = "v25.0"
 # Produção: lista explícita. Adicione https://lcoadv.com.br se o site responder sem www.
 ALLOWED_ORIGINS = "https://www.lcoadv.com.br"
 # production = CORS estrito; development = permite * ou vazio em ALLOWED_ORIGINS
 WORKER_ENV = "production"
-# Test Events (Meta Events Manager) — Lorena / LCOAdv. Remova ou esvazie após validar.
-TEST_EVENT_CODE = "TEST7356"
 # Retornar detalhes da Meta em erros HTTP (desligado em produção por omissão)
 EXPOSE_META_ERRORS = "false"
 # Referência de endpoint público (espelho do .env)
