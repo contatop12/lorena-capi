@@ -2,10 +2,21 @@
  * Meta CAPI — tracker leve (Vanilla JS).
  * Contrato de payload: ver directives/contrato_payload_capi.md
  *
- * Configuração do endpoint (um dos dois):
- *   <script src="tracker.js" data-endpoint="https://seu-worker.workers.dev/event"></script>
+ * Snippet unificado (Browser Pixel + CAPI):
+ *   <script
+ *     src="tracker.js"
+ *     data-endpoint="https://seu-worker.workers.dev/event"
+ *     data-pixel-id="993975279878737"
+ *   ></script>
+ *
+ * Configuração de endpoint (um dos dois):
+ *   data-endpoint="https://seu-worker.workers.dev/event"
  *   Rotas no Worker: POST /event (recomendado), POST /collect ou POST /
  *   window.__META_TRACKER_ENDPOINT__ = "https://.../event"; // antes de carregar o script
+ *
+ * Configuração de pixel browser (opcional):
+ *   data-pixel-id="993975279878737"
+ *   window.__META_PIXEL_ID__ = "993975279878737"; // fallback
  *
  * Debug opcional: window.__META_TRACKER_DEBUG__ = true;
  */
@@ -13,6 +24,8 @@
   "use strict";
 
   var ENDPOINT_ATTR = "data-endpoint";
+  var PIXEL_ID_ATTR = "data-pixel-id";
+  var FBQ_SCRIPT_URL = "https://connect.facebook.net/en_US/fbevents.js";
   var COOKIE_MAX_AGE = 90 * 24 * 60 * 60; // 90 dias (padrão comum _fbp)
   var FETCH_TIMEOUT_MS = 8000;
   var QUEUE = [];
@@ -119,6 +132,64 @@
     return "";
   }
 
+  function resolvePixelId() {
+    if (global.__META_PIXEL_ID__) {
+      return String(global.__META_PIXEL_ID__);
+    }
+    var cur = document.currentScript;
+    if (cur && cur.getAttribute(PIXEL_ID_ATTR)) {
+      return String(cur.getAttribute(PIXEL_ID_ATTR));
+    }
+    var scripts = document.getElementsByTagName("script");
+    for (var i = scripts.length - 1; i >= 0; i--) {
+      var s = scripts[i];
+      if (s && s.getAttribute(PIXEL_ID_ATTR)) {
+        return String(s.getAttribute(PIXEL_ID_ATTR));
+      }
+    }
+    return "";
+  }
+
+  function ensureBrowserPixel(pixelId) {
+    if (!pixelId) return false;
+    var hadFbq = typeof global.fbq === "function";
+    if (!hadFbq) {
+      !(function (f, b, e, v, n, t, s) {
+        if (f.fbq) return;
+        n = f.fbq = function () {
+          n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+        };
+        if (!f._fbq) f._fbq = n;
+        n.push = n;
+        n.loaded = true;
+        n.version = "2.0";
+        n.queue = [];
+        t = b.createElement(e);
+        t.async = true;
+        t.src = v;
+        s = b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t, s);
+      })(global, document, "script", FBQ_SCRIPT_URL);
+    }
+    if (!global.__META_TRACKER_FBQ_INIT_DONE) {
+      try {
+        global.fbq("init", pixelId);
+        global.__META_TRACKER_FBQ_INIT_DONE = true;
+      } catch (_) {
+        return false;
+      }
+    }
+    return typeof global.fbq === "function";
+  }
+
+  function sendBrowserEvent(payload) {
+    if (typeof global.fbq !== "function") return;
+    var custom = payload.custom_data && typeof payload.custom_data === "object" ? payload.custom_data : {};
+    try {
+      global.fbq("track", payload.event_name, custom, { eventID: payload.event_id });
+    } catch (_) {}
+  }
+
   function nowUnixSec() {
     return Math.floor(Date.now() / 1000);
   }
@@ -198,6 +269,7 @@
   }
 
   var endpoint = "";
+  var pixelId = "";
   var ready = false;
 
   function flushQueue() {
@@ -210,6 +282,7 @@
 
   function sendInternal(eventName, eventData, resolve, reject) {
     var payload = buildPayload(eventName, eventData);
+    sendBrowserEvent(payload);
     debug("send", payload.event_name, payload.event_id);
     postJson(endpoint, payload).then(function (r) {
       if (r && r.ok) {
@@ -245,9 +318,13 @@
 
   function init() {
     endpoint = resolveEndpoint();
+    pixelId = resolvePixelId();
     if (!endpoint) {
       debug("endpoint não configurado: use data-endpoint no <script> ou __META_TRACKER_ENDPOINT__");
       return;
+    }
+    if (pixelId) {
+      ensureBrowserPixel(pixelId);
     }
     ready = true;
     flushQueue();
@@ -260,6 +337,9 @@
     uuid: uuidV4,
     _getEndpoint: function () {
       return endpoint;
+    },
+    _getPixelId: function () {
+      return pixelId;
     },
     _isReady: function () {
       return ready;
