@@ -12,7 +12,7 @@
 #
 # Desenvolvimento local: copie .dev.vars.example para .dev.vars e preencha.
 
-name = "conversao-api-meta"
+name = "lorena-capi"
 main = "worker.js"
 compatibility_date = "2024-10-01"
 
