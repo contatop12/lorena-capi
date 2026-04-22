@@ -11,6 +11,163 @@ import { handleMonitorRequest } from "./monitor/router.js";
 import { buildMonitorExtras } from "./monitor/telemetry.js";
 import { logMonitor, truncateUrl } from "./monitor/store.js";
 
+const TRACKER_JS = `(function (global) {
+  "use strict";
+  var ENDPOINT_ATTR = "data-endpoint";
+  var PIXEL_ID_ATTR = "data-pixel-id";
+  var FBQ_SCRIPT_URL = "https://connect.facebook.net/en_US/fbevents.js";
+  var COOKIE_MAX_AGE = 90 * 24 * 60 * 60;
+  var FETCH_TIMEOUT_MS = 8000;
+  var QUEUE = [];
+  function uuidV4() {
+    if (global.crypto && typeof global.crypto.randomUUID === "function") return global.crypto.randomUUID();
+    function rnd(n) { var s = ""; for (var i = 0; i < n; i++) s += ((Math.random() * 16) | 0).toString(16); return s; }
+    return rnd(8) + "-" + rnd(4) + "-4" + rnd(3) + "-" + ("89ab"[(Math.random() * 4) | 0] + rnd(3)) + "-" + rnd(12);
+  }
+  function getCookie(name) {
+    var parts = ("; " + (document.cookie || "")).split("; " + name + "=");
+    if (parts.length === 2) return parts.pop().split(";").shift() || "";
+    return "";
+  }
+  function setCookie(name, value, maxAgeSec) {
+    var secure = typeof location !== "undefined" && location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value) + "; Path=/; Max-Age=" + maxAgeSec + "; SameSite=Lax" + secure;
+  }
+  function newFbp() { return "fb.1." + String(Date.now()) + "." + String((Math.random() * 1e10) | 0); }
+  function newFbcFromClid(fbclid) { return "fb.1." + String(Date.now()) + "." + String(fbclid); }
+  function getFbclidFromUrl() { try { return new URL(location.href).searchParams.get("fbclid") || ""; } catch (_) { return ""; } }
+  function ensureFbpFbc() {
+    var hadFbp = !!getCookie("_fbp");
+    var fbp = getCookie("_fbp");
+    if (!fbp) { fbp = newFbp(); setCookie("_fbp", fbp, COOKIE_MAX_AGE); }
+    var fbc = getCookie("_fbc");
+    var clid = getFbclidFromUrl();
+    if (clid && (!fbc || fbc.indexOf(clid) === -1)) { fbc = newFbcFromClid(clid); setCookie("_fbc", fbc, COOKIE_MAX_AGE); }
+    return { fbp: fbp, fbc: fbc || "", fbp_source: hadFbp ? "cookie_antes" : "tracker_novo" };
+  }
+  function pickAttr(attr) {
+    var cur = document.currentScript;
+    if (cur && cur.getAttribute(attr)) return String(cur.getAttribute(attr));
+    var scripts = document.getElementsByTagName("script");
+    for (var i = scripts.length - 1; i >= 0; i--) {
+      var s = scripts[i];
+      if (s && s.getAttribute(attr)) return String(s.getAttribute(attr));
+    }
+    return "";
+  }
+  function resolveEndpoint() { return global.__META_TRACKER_ENDPOINT__ ? String(global.__META_TRACKER_ENDPOINT__) : pickAttr(ENDPOINT_ATTR); }
+  function resolvePixelId() { return global.__META_PIXEL_ID__ ? String(global.__META_PIXEL_ID__) : pickAttr(PIXEL_ID_ATTR); }
+  function ensureBrowserPixel(pixelId) {
+    if (!pixelId) return false;
+    if (typeof global.fbq !== "function") {
+      !(function (f, b, e, v, n, t, s) {
+        if (f.fbq) return;
+        n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); };
+        if (!f._fbq) f._fbq = n;
+        n.push = n; n.loaded = true; n.version = "2.0"; n.queue = [];
+        t = b.createElement(e); t.async = true; t.src = v;
+        s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
+      })(global, document, "script", FBQ_SCRIPT_URL);
+    }
+    if (!global.__META_TRACKER_FBQ_INIT_DONE) {
+      global.fbq("init", pixelId);
+      global.__META_TRACKER_FBQ_INIT_DONE = true;
+    }
+    return typeof global.fbq === "function";
+  }
+  function sendBrowserEvent(payload) {
+    if (typeof global.fbq !== "function") return;
+    var custom = payload.custom_data && typeof payload.custom_data === "object" ? payload.custom_data : {};
+    try { global.fbq("track", payload.event_name, custom, { eventID: payload.event_id }); } catch (_) {}
+  }
+  function nowUnixSec() { return Math.floor(Date.now() / 1000); }
+  function postJson(url, body) {
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer;
+    var p = fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      mode: "cors",
+      credentials: "omit",
+      keepalive: true,
+      signal: ctrl ? ctrl.signal : undefined,
+    });
+    if (ctrl) timer = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, FETCH_TIMEOUT_MS);
+    return Promise.resolve(p).then(
+      function (res) {
+        if (timer) clearTimeout(timer);
+        return res.json().catch(function () { return { ok: false, error: "invalid_json_response" }; });
+      },
+      function (err) {
+        if (timer) clearTimeout(timer);
+        return { ok: false, error: err && err.name === "AbortError" ? "timeout" : "network" };
+      },
+    );
+  }
+  function buildPayload(eventName, eventData) {
+    eventData = eventData || {};
+    var ids = ensureFbpFbc();
+    var custom = eventData.custom_data || eventData.customData || {};
+    var extraUser = eventData.user_data || eventData.userData || {};
+    var hasFbq = typeof global.fbq === "function";
+    var clientCtx = { fbp_source: ids.fbp_source, meta_pixel_loaded: hasFbq, pixel_status: hasFbq ? "active" : "unknown" };
+    var exCtx = eventData.client_context;
+    if (exCtx && typeof exCtx === "object") for (var ck in exCtx) if (Object.prototype.hasOwnProperty.call(exCtx, ck)) clientCtx[ck] = exCtx[ck];
+    return {
+      schema: "meta-capi-v1",
+      event_name: String(eventName || "PageView"),
+      event_id: uuidV4(),
+      event_time: typeof eventData.event_time === "number" ? eventData.event_time : nowUnixSec(),
+      event_source_url: String(location.href),
+      referrer_url: String(document.referrer || ""),
+      action_source: "website",
+      custom_data: typeof custom === "object" && custom ? custom : {},
+      user_data: Object.assign({ client_user_agent: String(navigator.userAgent || ""), fbp: ids.fbp, fbc: ids.fbc || undefined }, typeof extraUser === "object" && extraUser ? extraUser : {}),
+      client_context: clientCtx,
+    };
+  }
+  var endpoint = "";
+  var pixelId = "";
+  var ready = false;
+  function flushQueue() { if (!endpoint) return; while (QUEUE.length) { var job = QUEUE.shift(); sendInternal(job.name, job.data, job.resolve, job.reject); } }
+  function sendInternal(eventName, eventData, resolve, reject) {
+    var payload = buildPayload(eventName, eventData);
+    sendBrowserEvent(payload);
+    postJson(endpoint, payload).then(function (r) { if (r && r.ok) { if (resolve) resolve(r); } else if (reject) reject(r); });
+  }
+  function track(eventName, eventData) {
+    return new Promise(function (resolve, reject) {
+      if (!endpoint) { QUEUE.push({ name: eventName, data: eventData, resolve: resolve, reject: reject }); return; }
+      sendInternal(eventName, eventData, resolve, reject);
+    });
+  }
+  function schedulePageView() {
+    var run = function () { track("PageView", {}).catch(function () {}); };
+    if (global.requestIdleCallback) global.requestIdleCallback(run, { timeout: 3000 });
+    else global.setTimeout(run, 0);
+  }
+  function init() {
+    endpoint = resolveEndpoint();
+    pixelId = resolvePixelId();
+    if (!endpoint) return;
+    if (pixelId) ensureBrowserPixel(pixelId);
+    ready = true;
+    flushQueue();
+    schedulePageView();
+  }
+  global.MetaTracker = {
+    track: track,
+    uuid: uuidV4,
+    _getEndpoint: function () { return endpoint; },
+    _getPixelId: function () { return pixelId; },
+    _isReady: function () { return ready; },
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})(typeof window !== "undefined" ? window : this);
+`;
+
 export default {
   /**
    * @param {Request} request
@@ -30,6 +187,13 @@ export default {
 
     if (request.method === "GET" && (path === "/" || path === "/health")) {
       return healthResponse(request, env);
+    }
+
+    if (
+      request.method === "GET" &&
+      (path === "/tracker.js" || path === "/trackerjs" || path === "/meta-tracker.js")
+    ) {
+      return trackerJsResponse(request, env);
     }
 
     const collectPaths = ["/collect", "/event", "/"];
@@ -146,6 +310,18 @@ function checkBrowserOriginPolicy(request, env) {
 function handleOptions(request, env, _path) {
   const h = corsHeadersFor(request, env);
   return new Response(null, { status: 204, headers: h });
+}
+
+/**
+ * @param {Request} request
+ * @param {Record<string, string | undefined>} env
+ */
+function trackerJsResponse(request, env) {
+  const h = corsHeadersFor(request, env);
+  h.set("Content-Type", "application/javascript; charset=utf-8");
+  h.set("Cache-Control", "public, max-age=300");
+  h.set("X-Content-Type-Options", "nosniff");
+  return new Response(TRACKER_JS, { status: 200, headers: h });
 }
 
 /**
