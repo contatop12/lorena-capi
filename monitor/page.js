@@ -11,14 +11,15 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <style>
     :root {
       --bg: #060607;
-      --panel: #0e0e11;
-      --line: rgba(255, 107, 44, 0.22);
+      --panel: #0f1013;
+      --line: rgba(255, 107, 44, 0.26);
       --accent: #ff6b2c;
       --text: #e8e6e3;
       --muted: #7a778c;
       --ok: #3ddc84;
       --err: #ff4d6d;
-      --info: #5b9fd4;
+      --warn: #fbbf77;
+      --chip: rgba(91, 159, 212, 0.14);
     }
     * { box-sizing: border-box; }
     body {
@@ -31,486 +32,382 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
         radial-gradient(ellipse 120% 80% at 20% -20%, rgba(255,107,44,0.12), transparent 50%),
         radial-gradient(ellipse 80% 60% at 100% 10%, rgba(120,80,255,0.08), transparent 45%);
     }
-    body::after {
-      content: "";
-      pointer-events: none;
-      position: fixed;
-      inset: 0;
-      opacity: 0.04;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    }
-    header { padding: 2rem 1.5rem 1rem; border-bottom: 1px solid var(--line); position: relative; }
+    header { padding: 1.7rem 1.5rem 0.9rem; border-bottom: 1px solid var(--line); }
     h1 {
-      font-family: "Syne", system-ui, sans-serif;
-      font-weight: 700;
-      font-size: clamp(1.4rem, 4vw, 2rem);
       margin: 0 0 0.35rem;
+      font-family: "Syne", sans-serif;
       letter-spacing: -0.02em;
+      font-size: clamp(1.35rem, 3vw, 2rem);
     }
-    .sub { color: var(--muted); font-size: 0.8rem; max-width: 56rem; line-height: 1.5; }
-    main { padding: 1.25rem 1.5rem 3rem; position: relative; }
-    .grid2 {
+    .sub { margin: 0; max-width: 70rem; color: var(--muted); font-size: 0.78rem; line-height: 1.5; }
+    main { padding: 1rem 1.5rem 2rem; }
+    .banner {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.7rem 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+      font-size: 0.74rem;
+    }
+    .banner.warn { border-color: rgba(255, 180, 60, 0.45); color: var(--warn); }
+    .banner.err { border-color: rgba(255, 77, 109, 0.45); color: #fca3b8; }
+    .kpis {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.7rem;
+      margin: 0.9rem 0 1rem;
     }
-    .stat-card {
-      background: var(--panel);
+    .kpi {
       border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 1.1rem 1.2rem;
-      position: relative;
-      overflow: hidden;
-    }
-    .stat-card h2 {
-      font-family: "Syne", sans-serif;
-      font-size: 0.8rem;
-      font-weight: 600;
-      margin: 0 0 0.4rem;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 0.45rem;
-    }
-    .stat-icon { font-size: 1rem; opacity: 0.9; }
-    .stat-metric { font-size: 1.75rem; font-weight: 600; color: var(--ok); line-height: 1.1; }
-    .stat-metric.mutedn { color: var(--muted); font-size: 0.9rem; font-weight: 400; }
-    .stat-desc { font-size: 0.7rem; color: var(--muted); margin: 0.4rem 0; line-height: 1.4; }
-    .stat-fine { font-size: 0.65rem; color: var(--muted); line-height: 1.45; opacity: 0.95; }
-    .card {
+      border-radius: 10px;
       background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.35);
-      margin-bottom: 1rem;
+      padding: 0.85rem 0.95rem;
     }
-    .card h3 {
-      font-family: "Syne", sans-serif;
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin: 0;
-      padding: 0.75rem 0.9rem;
-      background: rgba(0,0,0,0.2);
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
-    th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
-    th {
-      font-family: "Syne", sans-serif;
-      font-weight: 600;
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      background: rgba(0,0,0,0.2);
-    }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: rgba(255,107,44,0.04); }
-    .status-ok { color: var(--ok); font-weight: 600; }
-    .status-err { color: var(--err); font-weight: 600; }
-    .mono { font-variant-numeric: tabular-nums; }
-    .micro {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      min-width: 3.5rem;
-    }
-    .microbar {
-      height: 5px;
-      width: 48px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .microbar > i {
-      display: block;
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), #c2410c);
-      border-radius: 3px;
-    }
-    .microbar.ok > i { background: var(--ok); }
-    .evt-pill {
-      display: inline-block;
-      padding: 0.2rem 0.45rem;
-      border-radius: 4px;
-      background: rgba(91, 159, 212, 0.15);
-      color: var(--info);
-      font-size: 0.68rem;
-      font-weight: 600;
-    }
-    .row-dot { display: inline-flex; align-items: center; gap: 0.35rem; }
-    .dot { width: 7px; height: 7px; border-radius: 50%; }
-    .dot-ok { background: var(--ok); box-shadow: 0 0 8px rgba(61, 220, 132, 0.45); }
-    .dot-err { background: var(--err); }
-    .dot-warn { background: #fbbf77; }
+    .kpi .lbl { font-size: 0.67rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; }
+    .kpi .val { font-size: 1.25rem; margin-top: 0.35rem; font-weight: 600; }
     .toolbar {
       display: flex;
+      gap: 0.5rem;
       flex-wrap: wrap;
-      gap: 0.5rem 0.75rem;
       align-items: center;
-      margin: 0.75rem 0 0.5rem;
+      margin-bottom: 0.8rem;
     }
-    .pill {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      padding: 0.35rem 0.65rem;
-      border: 1px solid var(--line);
+    .live {
+      border: 1px solid var(--accent);
+      color: var(--accent);
       border-radius: 999px;
-      color: var(--muted);
-    }
-    .pill.live { border-color: var(--accent); color: var(--accent); animation: pulse 2.4s ease-in-out infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
-    .tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-    .tab {
-      font-family: inherit;
+      padding: 0.24rem 0.58rem;
       font-size: 0.68rem;
-      padding: 0.4rem 0.75rem;
-      border-radius: 6px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    button, select {
+      font-family: inherit;
       border: 1px solid var(--line);
-      background: transparent;
-      color: var(--muted);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 0.45rem 0.68rem;
+      font-size: 0.73rem;
+    }
+    button.primary {
+      border: none;
+      background: linear-gradient(135deg, var(--accent), #c2410c);
+      color: #0a0a0b;
+      font-weight: 600;
       cursor: pointer;
     }
-    .tab:hover { color: var(--text); border-color: rgba(255,107,44,0.45); }
-    .tab.on { background: rgba(255, 107, 44, 0.12); border-color: var(--accent); color: var(--accent); }
-    button.primary {
-      font-family: inherit;
-      background: linear-gradient(135deg, var(--accent), #c2410c);
-      border: none; color: #0a0a0b; font-weight: 600; padding: 0.5rem 0.9rem; border-radius: 6px; cursor: pointer; font-size: 0.75rem;
+    .spacer { flex: 1; min-width: 0; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: var(--panel);
+      margin-bottom: 0.85rem;
+      overflow: hidden;
     }
-    button.ghost { font-family: inherit; font-size: 0.75rem; cursor: pointer; border: 1px solid var(--line);
-      background: var(--panel); color: var(--text); padding: 0.5rem 0.9rem; border-radius: 6px; }
-    .banner { margin-bottom: 1rem; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid var(--line); font-size: 0.75rem; line-height: 1.5; color: var(--muted); }
-    .banner.warn { border-color: rgba(255, 180, 60, 0.45); color: #fbbf77; }
-    .banner.err { border-color: rgba(255, 77, 109, 0.45); color: #fda4b4; }
-    .empty { padding: 2rem; text-align: center; color: var(--muted); font-size: 0.8rem; }
-    dialog { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 10px; padding: 1.25rem; max-width: 22rem; }
+    .card h3 {
+      margin: 0;
+      padding: 0.62rem 0.8rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-family: "Syne", sans-serif;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.71rem; }
+    th, td { text-align: left; padding: 0.55rem 0.7rem; border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: top; }
+    th { color: var(--muted); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; }
+    tr:last-child td { border-bottom: none; }
+    .chip {
+      display: inline-block;
+      background: var(--chip);
+      color: #88c0ff;
+      border-radius: 4px;
+      padding: 0.18rem 0.42rem;
+      font-size: 0.66rem;
+      font-weight: 600;
+    }
+    .ok { color: var(--ok); font-weight: 600; }
+    .err { color: var(--err); font-weight: 600; }
+    .warn { color: var(--warn); font-weight: 600; }
+    .mono { font-variant-numeric: tabular-nums; }
+    .muted { color: var(--muted); }
+    .empty { color: var(--muted); padding: 1.3rem; text-align: center; }
+    dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); }
     dialog::backdrop { background: rgba(0,0,0,0.65); }
-    dialog input {
-      width: 100%; margin-top: 0.5rem; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--line);
-      background: var(--bg); color: var(--text); font-family: inherit; font-size: 0.8rem;
-    }
+    dialog input { width: 100%; margin-top: 0.5rem; border: 1px solid var(--line); border-radius: 6px; background: #090a0d; color: var(--text); padding: 0.5rem; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Tráfego CAPI</h1>
-    <p class="sub">Resumo de recuperação (CAPI), navegadores e fila de eventos. Dados vêm do Worker; histórico entre invocações exige KV <code>EVENT_LOG</code> no <code>wrangler.toml</code>. E-mail aparece se enviado em <code>custom_data.email</code> (mascarado) ou <code>monitor.email</code>.</p>
+    <h1>Tráfego CAPI Framework</h1>
+    <p class="sub">Visão operacional de eventos CAPI, leads via webhook e correlação por <code>event_id</code>. Use filtros para investigar queda de entrega e validar se o lead entrou no fluxo server-side.</p>
   </header>
   <main>
     <div id="banners"></div>
+    <section class="kpis">
+      <article class="kpi"><div class="lbl">CAPI total</div><div class="val" id="kpiEventTotal">0</div></article>
+      <article class="kpi"><div class="lbl">CAPI sucesso</div><div class="val" id="kpiEventOk">0%</div></article>
+      <article class="kpi"><div class="lbl">Leads webhook</div><div class="val" id="kpiLeadTotal">0</div></article>
+      <article class="kpi"><div class="lbl">Correlação confirmada</div><div class="val" id="kpiCorr">0</div></article>
+    </section>
 
-    <div class="grid2">
-      <div class="stat-card">
-        <h2><span class="stat-icon" aria-hidden="true">⛨</span> Ad blockers &amp; pixel</h2>
-        <p class="stat-desc" style="margin-top:0">Quando o pixel não dispara, o CAPI ainda pode registrar a conversão.</p>
-        <div id="statAd" class="stat-metric mutedn">—</div>
-        <p id="statAdSub" class="stat-fine"></p>
-      </div>
-      <div class="stat-card">
-        <h2><span class="stat-icon" aria-hidden="true">🛡</span> ITP / cookies <code style="font-size:0.6rem">_fbp</code></h2>
-        <p class="stat-desc" style="margin-top:0">Origem aproximada do cookie (tracker envia <code>client_context</code>).</p>
-        <div id="statItp" class="stat-metric" style="color: var(--ok)">—</div>
-        <p id="statItpSub" class="stat-fine"></p>
-      </div>
+    <div class="toolbar">
+      <span class="live">ao vivo</span>
+      <select id="fEvent"><option value="all">Evento: todos</option></select>
+      <select id="fStatus">
+        <option value="all">Status: todos</option>
+        <option value="ok">Status: ok</option>
+        <option value="error">Status: erro</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="primary" id="btnToken">Token monitor</button>
+      <button id="btnRefresh">Atualizar</button>
     </div>
 
-    <div class="card">
-      <h3>Distribuição por navegador</h3>
+    <section class="card">
+      <h3>Correlação lead -> CAPI</h3>
       <table>
         <thead>
           <tr>
-            <th>Browser</th>
-            <th>Eventos</th>
-            <th>Ad block sinal</th>
-            <th>Cookie tracker</th>
+            <th>event_id</th>
+            <th>Lead</th>
+            <th>Status</th>
+            <th>CAPI</th>
+            <th>Horários</th>
           </tr>
         </thead>
-        <tbody id="browserRows"><tr><td colspan="4" class="empty">—</td></tr></tbody>
+        <tbody id="corRows"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
       </table>
-    </div>
+    </section>
 
-    <div class="toolbar" style="margin-top:0.5rem">
-      <span class="pill live" id="livePill">ao vivo</span>
-      <div class="tabs" id="tabRow"></div>
-      <div style="flex:1;min-width:0"></div>
-      <button type="button" class="primary" id="btnToken">Definir token</button>
-      <button type="button" class="ghost" id="btnRefresh">Atualizar</button>
-    </div>
+    <section class="card">
+      <h3>Leads recebidos (webhook)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Horário</th>
+            <th>Nome/Contato</th>
+            <th>Origem</th>
+            <th>event_id</th>
+            <th>Detalhe</th>
+          </tr>
+        </thead>
+        <tbody id="leadRows"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+      </table>
+    </section>
 
-    <div class="card" style="margin-top:0.5rem">
-      <h3>Log de eventos</h3>
+    <section class="card">
+      <h3>Eventos CAPI</h3>
       <table>
         <thead>
           <tr>
             <th>Horário</th>
             <th>Evento</th>
+            <th>Status</th>
+            <th>event_id</th>
             <th>Contato</th>
-            <th>Meta CAPI</th>
-            <th>Pixel (sinal)</th>
-            <th>Browser / SO</th>
-            <th>Bot</th>
+            <th>Browser</th>
+            <th>Detalhe</th>
           </tr>
         </thead>
-        <tbody id="rows">
-          <tr><td colspan="7" class="empty">Carregando…</td></tr>
-        </tbody>
+        <tbody id="eventRows"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
       </table>
-    </div>
+    </section>
   </main>
+
   <dialog id="dlg">
-    <form method="dialog" id="dlgForm">
+    <form method="dialog" id="dlgForm" style="padding:1rem;min-width:20rem">
       <strong style="font-family:Syne,sans-serif">Token do monitor</strong>
-      <p style="font-size:0.75rem;color:var(--muted);margin:0.5rem 0 0">Mesmo valor da variável <code>MONITOR_TOKEN</code> no Worker.</p>
-      <input type="password" id="tokInput" autocomplete="off" placeholder="cole o token" />
-      <menu style="margin-top:1rem;display:flex;gap:0.5rem;justify-content:flex-end;padding:0">
-        <button type="button" class="ghost" id="dlgCancel" value="cancel">Cancelar</button>
-        <button type="submit" class="primary" value="default">Salvar</button>
+      <p class="muted" style="font-size:0.74rem;margin:0.45rem 0 0">Mesmo valor de <code>MONITOR_TOKEN</code> no Worker.</p>
+      <input id="tokInput" type="password" placeholder="cole o token" />
+      <menu style="display:flex;gap:0.4rem;justify-content:flex-end;padding:0;margin-top:0.8rem">
+        <button type="button" id="dlgCancel">Cancelar</button>
+        <button class="primary" type="submit">Salvar</button>
       </menu>
     </form>
   </dialog>
+
   <script>
 (function () {
   var KEY = "meta_capi_monitor_token";
-  var rows = document.getElementById("rows");
-  var browserRows = document.getElementById("browserRows");
-  var tabRow = document.getElementById("tabRow");
-  var banners = document.getElementById("banners");
-  var statAd = document.getElementById("statAd");
-  var statAdSub = document.getElementById("statAdSub");
-  var statItp = document.getElementById("statItp");
-  var statItpSub = document.getElementById("statItpSub");
   var dlg = document.getElementById("dlg");
   var tokInput = document.getElementById("tokInput");
-
-  var lastItems = [];
-  var filterEvent = "all";
+  var banners = document.getElementById("banners");
+  var eventRows = document.getElementById("eventRows");
+  var leadRows = document.getElementById("leadRows");
+  var corRows = document.getElementById("corRows");
+  var fEvent = document.getElementById("fEvent");
+  var fStatus = document.getElementById("fStatus");
+  var state = { events: [], leads: [], correlations: [], metrics: {} };
 
   function token() { try { return sessionStorage.getItem(KEY) || ""; } catch (_) { return ""; } }
-  function setToken(t) { try { sessionStorage.setItem(KEY, t); } catch (_) {} }
-
-  function esc(s) {
-    if (s == null) return "";
-    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  function setToken(v) { try { sessionStorage.setItem(KEY, v); } catch (_) {} }
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function fmtTs(ts) {
+    var n = Number(ts || Date.now());
+    var d = new Date(n);
+    return d.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit" });
   }
+  function statusCls(ok) { return ok === true ? "ok" : ok === false ? "err" : "warn"; }
+  function statusTxt(ok) { return ok === true ? "OK" : ok === false ? "Erro" : "Pendente"; }
 
-  function realEvents(items) {
-    return items.filter(function (e) { return e && e.event_name != null && e.event_name !== ""; });
-  }
-
-  function fbpKey(k) {
-    if (!k) return "—";
-    if (k === "cookie_antes") return "cookie_antes";
-    if (k === "tracker_novo") return "tracker_novo";
-    return k;
-  }
-
-  function renderSummary(items) {
-    var ev = realEvents(items);
-    var n = ev.length;
-    if (!n) {
-      statAd.textContent = "0%";
-      statAdSub.textContent = "Ainda sem eventos com nome no buffer.";
-      statItp.textContent = "0";
-      statItpSub.textContent = "Nenhum _fbp categorizado ainda.";
+  function renderBanners(data, err) {
+    banners.innerHTML = "";
+    if (err) {
+      var e = document.createElement("div");
+      e.className = "banner err";
+      e.textContent = err;
+      banners.appendChild(e);
       return;
     }
-    var withAd = ev.filter(function (e) { return e.ad_block_suspected === true; });
-    if (withAd.length) {
-      var ok = withAd.filter(function (e) { return e.ok === true; }).length;
-      var pct = Math.round(100 * ok / withAd.length);
-      statAd.textContent = pct + "% CAPI ok";
-      statAdSub.textContent = "Sinal de bloqueio: " + withAd.length + " evento(s) — " + ok + " entregue(s) à Meta com sucesso. Sem bloqueio detectado nos demais (use client_context.ad_block_suspected no site).";
-    } else {
-      statAd.textContent = "0%";
-      statAdSub.textContent = "Nenhum evento com ad_block_suspected=true. Inclua no envio: MetaTracker.track(\"Lead\", { client_context: { ad_block_suspected: true } }) quando fizer detecção no front.";
+    if (data && !data.kv_configured) {
+      var w = document.createElement("div");
+      w.className = "banner warn";
+      w.innerHTML = "KV <strong>EVENT_LOG</strong> não configurado. Operando em modo reduzido por instância.";
+      banners.appendChild(w);
     }
-    var fbp = {};
-    ev.forEach(function (e) {
-      var k = fbpKey(e.fbp_source) || "—";
-      fbp[k] = (fbp[k] || 0) + 1;
-    });
-    var line = Object.keys(fbp)
-      .sort()
-      .map(function (k) { return k + " " + fbp[k]; })
-      .join(" · ");
-    var trk = fbp.tracker_novo || 0;
-    var pctItp = n ? Math.round(100 * trk / n) : 0;
-    statItp.textContent = pctItp + "% com cookie criado no tracker";
-    statItpSub.textContent = line
-      ? line + ". cookie_antes ≈ pixel/outro; tracker_novo = _fbp criado nesta lib."
-      : "—";
   }
 
-  function renderBrowserTable(items) {
-    var ev = realEvents(items);
+  function renderMetrics(m) {
+    document.getElementById("kpiEventTotal").textContent = String(m.event_total || 0);
+    document.getElementById("kpiEventOk").textContent = String(m.capi_success_rate || 0) + "%";
+    document.getElementById("kpiLeadTotal").textContent = String(m.lead_total || 0);
+    document.getElementById("kpiCorr").textContent = String(m.correlation_confirmed || 0) + " / " + String(m.lead_total || 0);
+  }
+
+  function refreshEventFilter(events) {
+    var current = fEvent.value || "all";
+    var names = {};
+    events.forEach(function (e) { if (e.event_name) names[e.event_name] = true; });
+    var opts = ['<option value="all">Evento: todos</option>'];
+    Object.keys(names).sort().forEach(function (n) {
+      opts.push('<option value="' + esc(n) + '">' + esc(n) + "</option>");
+    });
+    fEvent.innerHTML = opts.join("");
+    fEvent.value = names[current] ? current : "all";
+  }
+
+  function filteredEvents() {
+    var ev = state.events || [];
+    var eName = fEvent.value || "all";
+    var st = fStatus.value || "all";
+    return ev.filter(function (e) {
+      if (eName !== "all" && e.event_name !== eName) return false;
+      if (st === "ok" && e.ok !== true) return false;
+      if (st === "error" && e.ok !== false) return false;
+      return true;
+    });
+  }
+
+  function renderEvents() {
+    var ev = filteredEvents();
     if (!ev.length) {
-      browserRows.innerHTML = '<tr><td colspan="4" class="empty">Sem amostra ainda.</td></tr>';
+      eventRows.innerHTML = '<tr><td colspan="7" class="empty">Sem eventos para os filtros atuais.</td></tr>';
       return;
     }
-    var by = {};
-    ev.forEach(function (e) {
-      var b = e.browser || "Unknown";
-      if (!by[b]) by[b] = { n: 0, ad: 0, tr: 0 };
-      by[b].n++;
-      if (e.ad_block_suspected) by[b].ad++;
-      if (e.fbp_source === "tracker_novo") by[b].tr++;
-    });
-    var keys = Object.keys(by).sort(function (a, c) { return by[c].n - by[a].n; });
-    var maxN = 1;
-    keys.forEach(function (k) { if (by[k].n > maxN) maxN = by[k].n; });
-    browserRows.innerHTML = keys.map(function (b) {
-      var o = by[b];
-      var pAd = o.n ? o.ad / o.n : 0;
-      var pTr = o.n ? o.tr / o.n : 0;
+    eventRows.innerHTML = ev.map(function (e) {
+      var contact = esc(e.email_masked || "—");
+      if (e.phone_masked) contact += '<br><small class="muted">' + esc(e.phone_masked) + "</small>";
+      if (e.lead_name) contact += '<br><small class="muted">' + esc(e.lead_name) + "</small>";
       return (
-        "<tr><td><strong>" + esc(b) + "</strong></td><td class=\"mono\">" + o.n + "</td><td><div class=\"micro\"><div class=\"microbar\">" +
-        "<i style=\"width:" + Math.round(pAd * 100) + "%\"></i></div><span class=\"mono\">" + o.ad + "</span></div></td><td><div class=\"micro\"><div class=\"microbar ok\">" +
-        "<i style=\"width:" + Math.round(pTr * 100) + "%\"></i></div><span class=\"mono\">" + o.tr + "</span></div></td></tr>"
+        "<tr>" +
+        '<td class="mono">' + esc(fmtTs(e.ts)) + "</td>" +
+        "<td>" + (e.event_name ? '<span class="chip">' + esc(e.event_name) + "</span>" : esc(e.error || "—")) + "</td>" +
+        '<td class="' + statusCls(e.ok) + '">' + statusTxt(e.ok) + "</td>" +
+        '<td class="mono">' + esc(e.event_id || "—") + "</td>" +
+        "<td>" + contact + "</td>" +
+        "<td>" + esc(e.browser_os || "—") + "</td>" +
+        "<td>" + esc(e.detail || e.error || "—") + "</td>" +
+        "</tr>"
       );
     }).join("");
   }
 
-  function buildTabs(items) {
-    var ev = realEvents(items);
-    var names = {};
-    ev.forEach(function (e) { names[e.event_name] = true; });
-    var list = Object.keys(names).sort();
-    var html = '<button type="button" class="tab' + (filterEvent === "all" ? " on" : "") + '" data-e="all">Todos</button>';
-    list.forEach(function (n) {
-      html += '<button type="button" class="tab' + (filterEvent === n ? " on" : "") + '" data-e="' + esc(n) + '">' + esc(n) + "</button>";
-    });
-    tabRow.innerHTML = html;
-    [].forEach.call(tabRow.querySelectorAll(".tab"), function (btn) {
-      btn.onclick = function () {
-        filterEvent = btn.getAttribute("data-e") || "all";
-        buildTabs(lastItems);
-        renderDetail();
-      };
-    });
-  }
-
-  function pixelLabel(e) {
-    var s = (e && e.pixel_status) || "unknown";
-    if (s === "active") return { cls: "status-ok", t: "Ativo" };
-    if (s === "blocked" || s === "inactive") return { cls: "status-err", t: s === "blocked" ? "Bloqueio" : "Inativo" };
-    return { cls: "", t: "—" };
-  }
-
-  function renderDetail() {
-    var list = lastItems;
-    if (!list.length) {
-      rows.innerHTML = '<tr><td colspan="7" class="empty">Nada no buffer.</td></tr>';
+  function renderLeads() {
+    var leads = state.leads || [];
+    if (!leads.length) {
+      leadRows.innerHTML = '<tr><td colspan="5" class="empty">Sem leads via webhook ainda.</td></tr>';
       return;
     }
-    var base = filterEvent === "all" ? list : list.filter(function (e) { return e.event_name === filterEvent; });
-    if (!base.length) {
-      rows.innerHTML = '<tr><td colspan="7" class="empty">Nada neste filtro.</td></tr>';
+    leadRows.innerHTML = leads.map(function (l) {
+      var c = esc(l.email_masked || "—");
+      if (l.phone_masked) c += '<br><small class="muted">' + esc(l.phone_masked) + "</small>";
+      if (l.lead_name) c += '<br><small class="muted">' + esc(l.lead_name) + "</small>";
+      return (
+        "<tr>" +
+        '<td class="mono">' + esc(fmtTs(l.ts)) + "</td>" +
+        "<td>" + c + "</td>" +
+        "<td>" + esc(l.lead_source || "webhook") + "</td>" +
+        '<td class="mono">' + esc(l.event_id || "—") + "</td>" +
+        "<td>" + esc(l.page_url || l.detail || "—") + "</td>" +
+        "</tr>"
+      );
+    }).join("");
+  }
+
+  function renderCorrelations() {
+    var rows = state.correlations || [];
+    if (!rows.length) {
+      corRows.innerHTML = '<tr><td colspan="5" class="empty">Sem correlação disponível ainda.</td></tr>';
       return;
     }
-    rows.innerHTML = base
-      .map(function (e) {
-        var dt = new Date(e.ts || Date.now());
-        var time = dt.toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit", day: "2-digit", month: "2-digit" });
-        var en = e.event_name;
-        var okM = e.ok === true;
-        var px = pixelLabel(e);
-        var b = e.bot === true;
-        return (
-          "<tr>" +
-          '<td class="mono">' + esc(time) + "</td>" +
-          "<td>" +
-          (en
-            ? '<span class="evt-pill">' + esc(en) + "</span>"
-            : "<span class=\"status-err\">" + esc(e.error || "—") + "</span>") +
-          "</td>" +
-          "<td>" +
-          esc(e.email_masked || "—") +
-          (e.phone_masked ? "<br><small style=\"color:var(--muted)\">" + esc(e.phone_masked) + "</small>" : "") +
-          (e.lead_name ? "<br><small style=\"color:var(--muted)\">" + esc(e.lead_name) + "</small>" : "") +
-          "</td>" +
-          '<td><span class="row-dot"><span class="dot ' + (okM ? "dot-ok" : "dot-err") + '"></span>' + (okM ? "OK" : esc(e.error || "Falha")) + "</span></td>" +
-          '<td><span class="' + esc(px.cls) + '">' + esc(px.t) + "</span></td>" +
-          "<td>" + esc(e.browser_os || (e.browser && e.os ? e.browser + " / " + e.os : "—")) + "</td>" +
-          "<td>" + (b ? "Sim" : "Não") + "</td>" +
-          "</tr>"
-        );
-      })
-      .join("");
+    corRows.innerHTML = rows.map(function (c) {
+      var sCls = c.status === "confirmed" ? "ok" : c.status === "failed" ? "err" : "warn";
+      var sTxt = c.status === "confirmed" ? "Confirmado" : c.status === "failed" ? "Falhou" : "Pendente";
+      return (
+        "<tr>" +
+        '<td class="mono">' + esc(c.event_id || "—") + "</td>" +
+        "<td>" + esc(c.lead_name || "—") + (c.email_masked ? '<br><small class="muted">' + esc(c.email_masked) + "</small>" : "") + "</td>" +
+        '<td class="' + sCls + '">' + sTxt + "</td>" +
+        "<td>" + esc(c.event_name || "Lead") + (c.capi_error ? '<br><small class="err">' + esc(c.capi_error) + "</small>" : "") + "</td>" +
+        "<td class='mono'>" + esc(fmtTs(c.lead_ts)) + (c.capi_ts ? "<br>" + esc(fmtTs(c.capi_ts)) : "") + "</td>" +
+        "</tr>"
+      );
+    }).join("");
   }
 
-  function renderBanners(data, err) {
-    banners.innerHTML = "";
-    if (err) { var d = document.createElement("div"); d.className = "banner err"; d.textContent = err; banners.appendChild(d); return; }
-    if (data && !data.kv_configured) {
-      var w = document.createElement("div");
-      w.className = "banner warn";
-      w.innerHTML = "KV <strong>EVENT_LOG</strong> não ligado — agregados dependem de histórico curto. Configure no <code>wrangler.toml</code>.";
-      banners.appendChild(w);
-    }
-    if (data) {
-      var m = (window.__META_MONITOR__ && window.__META_MONITOR__.worker_env) || "";
-      if (m) { var p = document.createElement("div"); p.className = "banner"; p.textContent = "Worker env: " + m; banners.appendChild(p); }
-    }
-  }
-
-  function clearDash(msg) {
-    var m = msg || "—";
-    statAd.textContent = m; statItp.textContent = m;
-    statAdSub.textContent = ""; statItpSub.textContent = "";
-    browserRows.innerHTML = '<tr><td colspan="4" class="empty">' + esc(msg || "—") + "</td></tr>";
-    tabRow.innerHTML = "";
+  function paint(data) {
+    state.events = Array.isArray(data.events) ? data.events : [];
+    state.leads = Array.isArray(data.leads) ? data.leads : [];
+    state.correlations = Array.isArray(data.correlations) ? data.correlations : [];
+    state.metrics = data.metrics || {};
+    renderMetrics(state.metrics);
+    refreshEventFilter(state.events);
+    renderEvents();
+    renderLeads();
+    renderCorrelations();
   }
 
   async function load() {
-    try {
-      var hr = await fetch("/health");
-      var hj = await hr.json();
-      window.__META_MONITOR__ = { worker_env: hj.worker_env || "" };
-    } catch (_) { window.__META_MONITOR__ = { worker_env: "" }; }
     var h = { Accept: "application/json" };
     var t = token();
-    if (t) h["Authorization"] = "Bearer " + t;
+    if (t) h.Authorization = "Bearer " + t;
     try {
       var res = await fetch("/api/monitor/events", { headers: h, credentials: "same-origin" });
       var data = await res.json().catch(function () { return {}; });
       if (res.status === 401) {
-        lastItems = [];
-        rows.innerHTML = '<tr><td colspan="7" class="empty">Não autorizado — defina o token.</td></tr>';
-        clearDash("—");
-        renderBanners(null, "401: configure MONITOR_TOKEN no Worker.");
+        renderBanners(null, "Não autorizado (401). Configure MONITOR_TOKEN no painel.");
         return;
       }
       if (!res.ok) {
-        lastItems = [];
-        rows.innerHTML = '<tr><td colspan="7" class="empty">HTTP ' + res.status + "</td></tr>";
-        clearDash("—");
-        renderBanners(null, data.error || "Erro ao carregar");
+        renderBanners(null, data.error || ("Erro HTTP " + res.status));
         return;
       }
       renderBanners(data, null);
-      lastItems = data.items || [];
-      renderSummary(lastItems);
-      renderBrowserTable(lastItems);
-      buildTabs(lastItems);
-      renderDetail();
-    } catch (x) {
-      lastItems = [];
-      rows.innerHTML = '<tr><td colspan="7" class="empty">Falha de rede</td></tr>';
-      clearDash("—");
-      renderBanners(null, String(x && x.message ? x.message : x));
+      paint(data);
+    } catch (e) {
+      renderBanners(null, String(e && e.message ? e.message : e));
     }
   }
 
+  fEvent.onchange = renderEvents;
+  fStatus.onchange = renderEvents;
+  document.getElementById("btnRefresh").onclick = load;
   document.getElementById("btnToken").onclick = function () { tokInput.value = token(); dlg.showModal(); };
   document.getElementById("dlgCancel").onclick = function () { dlg.close(); };
   document.getElementById("dlgForm").onsubmit = function () { setToken(tokInput.value.trim()); dlg.close(); load(); };
-  document.getElementById("btnRefresh").onclick = function () { load(); };
   setInterval(load, 5000);
   load();
 })();

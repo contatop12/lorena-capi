@@ -1,6 +1,6 @@
 # Renomeie para .dev.vars para `wrangler dev` (não commitar .dev.vars)
 # Mesmas chaves que .env.example — espelho para desenvolvimento local do Worker.
-# Segredos: META_ACCESS_TOKEN, MONITOR_TOKEN (opcional em dev).
+# Segredos: META_ACCESS_TOKEN, MONITOR_TOKEN, WEBHOOK_TOKEN (opcional em dev).
 
 PIXEL_ID=
 META_ACCESS_TOKEN=
@@ -16,3 +16,6 @@ EXPOSE_META_ERRORS=true
 
 # Painel /dashboard — em dev pode ficar vazio se WORKER_ENV=development
 # MONITOR_TOKEN=
+
+# Webhook /webhook/lead — em dev pode ficar vazio se WORKER_ENV=development
+# WEBHOOK_TOKEN=

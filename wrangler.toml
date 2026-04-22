@@ -63,6 +63,8 @@ WORKER_EVENT_URL = "https://track.lcoadv.com.br/event"
 # Painel de monitoramento: GET /dashboard (mesmo host do Worker)
 # MONITOR_TOKEN — secret recomendado (produção). Em WORKER_ENV=development pode ficar vazio.
 #   wrangler secret put MONITOR_TOKEN
+# WEBHOOK_TOKEN — secret recomendado (produção) para POST /webhook/lead.
+#   wrangler secret put WEBHOOK_TOKEN
 # EVENT_LOG — KV para histórico entre invocações (dashboard / monitor).
 [[kv_namespaces]]
 binding = "EVENT_LOG"

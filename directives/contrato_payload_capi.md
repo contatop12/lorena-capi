@@ -9,7 +9,7 @@
 ## Corpo enviado pelo browser (schema `meta-capi-v1`)
 
 | Campo | Tipo | Obrigatório | Descrição |
-|--------|------|-------------|------------|
+| -------- | ------ | ------------- | ------------ |
 | `schema` | string | sim | Fixo: `meta-capi-v1` |
 | `event_name` | string | sim | Ex.: `PageView`, `Lead`, `Purchase` |
 | `event_id` | string | sim | UUID v4 para desduplicação |
@@ -33,6 +33,32 @@ O `tracker.js` envia `client_context` automaticamente. Eventos manuais podem mes
 
 - **200**: `{ "ok": true, "event_id": "...", "meta": { ... resposta Graph API ... } }`
 - **500**: `{ "ok": false, "error": "...", ... }` (configuração, JSON inválido, erro Graph API, etc.)
+
+## Webhook opcional de lead (`POST /webhook/lead`)
+
+Uso: receber confirmação do formulário e correlacionar no dashboard com o envio CAPI por `event_id`.
+
+- **Auth**: `Authorization: Bearer <WEBHOOK_TOKEN>` (ou `X-Webhook-Token` / `?token=`).
+- **Body**: pode ser `{ lead: { ... } }` ou objeto direto.
+
+Exemplo mínimo:
+
+```json
+{
+  "event_id": "uuid-opcional",
+  "event_name": "Lead",
+  "name": "Nome do lead",
+  "email": "lead@dominio.com",
+  "phone": "+55 61 99999-9999",
+  "source": "form_site",
+  "page_url": "https://www.cliente.com/landing"
+}
+```
+
+Resposta:
+
+- **200**: `{ "ok": true, "event_id": "...", "event_name": "Lead", "lead_source": "..." }`
+- **401**: `{ "ok": false, "error": "unauthorized_webhook" }`
 
 ## Variáveis de ambiente (replicação por cliente)
 

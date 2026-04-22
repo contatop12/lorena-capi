@@ -5,7 +5,7 @@ O código (`tracker.js`, `worker.js`) é **fixo** entre clientes. O que muda é 
 ## Chaves padronizadas (mesmo nome em todo lugar)
 
 | Chave | Onde definir (produção Cloudflare) | Onde definir (dev local) | Segredo? |
-|--------|-------------------------------------|---------------------------|----------|
+| -------- | ------------------------------------- | --------------------------- | ---------- |
 | `PIXEL_ID` | Dashboard Worker → Vars / `[vars]` no `wrangler.toml` | `.dev.vars` ou `[vars]` | Não |
 | `META_ACCESS_TOKEN` | `wrangler secret put META_ACCESS_TOKEN` ou Dashboard | `.dev.vars` | **Sim** |
 | `META_API_VERSION` | `[vars]` / Dashboard | `.dev.vars` / `[vars]` | Não |
@@ -15,6 +15,7 @@ O código (`tracker.js`, `worker.js`) é **fixo** entre clientes. O que muda é 
 | `EXPOSE_META_ERRORS` | `true`/`false` — detalhe de erro Meta na resposta | `[vars]` | Não |
 | `WORKER_EVENT_URL` | Referência humana / snippet no site (não lida pelo Worker) | `.env` / comentário | Não |
 | `MONITOR_TOKEN` | Painel `/dashboard` e `GET /api/monitor/events` | `wrangler secret put MONITOR_TOKEN` ou `[vars]` em dev | **Sim** (produção) |
+| `WEBHOOK_TOKEN` | Autenticação em `POST /webhook/lead` | `wrangler secret put WEBHOOK_TOKEN` ou `[vars]` em dev | **Sim** (produção) |
 | `EVENT_LOG` | Binding KV opcional — histórico do monitor entre invocações | `wrangler.toml` `[[kv_namespaces]]` | Não |
 
 ## Arquivos de referência no repositório
@@ -41,7 +42,7 @@ Use o mesmo host que estiver em `WORKER_EVENT_URL` no seu `.env` (comentário de
 ## Fluxo por novo cliente
 
 1. Duplicar projeto / mesmo repositório com novo `name` no `wrangler.toml` (ou outro worker).
-2. Preencher `PIXEL_ID`, `ALLOWED_ORIGINS`, `META_API_VERSION` (vars) e configurar secret `META_ACCESS_TOKEN`.
+2. Preencher `PIXEL_ID`, `ALLOWED_ORIGINS`, `META_API_VERSION` (vars) e configurar secrets `META_ACCESS_TOKEN` (+ `MONITOR_TOKEN` / `WEBHOOK_TOKEN` se usados).
 3. Publicar o Worker e colocar a URL **`/event`** (recomendado) ou `/collect` em `data-endpoint` no site.
 
 Contrato JSON browser → Worker: [contrato_payload_capi.md](contrato_payload_capi.md).

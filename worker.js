@@ -4,11 +4,17 @@
  *   WORKER_ENV (production|development), TEST_EVENT_CODE (opcional),
  *   EXPOSE_META_ERRORS (true para retornar corpo Meta em erros).
  *   MONITOR_TOKEN (opcional, recomendado) — painel GET /dashboard e GET /api/monitor/events.
+ *   WEBHOOK_TOKEN (opcional, recomendado) — POST /webhook/lead
  *   EVENT_LOG (KV opcional) — histórico de eventos no painel.
  * Contrato: directives/contrato_payload_capi.md
  */
 import { handleMonitorRequest } from "./monitor/router.js";
-import { buildMonitorExtras } from "./monitor/telemetry.js";
+import { webhookTokenOk } from "./monitor/auth.js";
+import {
+  buildMonitorExtras,
+  maskEmail,
+  maskPhone,
+} from "./monitor/telemetry.js";
 import { logMonitor, truncateUrl } from "./monitor/store.js";
 
 const TRACKER_JS = `(function (global) {
@@ -196,6 +202,10 @@ export default {
       (path === "/tracker.js" || path === "/trackerjs" || path === "/meta-tracker.js")
     ) {
       return trackerJsResponse(request, env);
+    }
+
+    if (request.method === "POST" && path === "/webhook/lead") {
+      return handleWebhookLead(request, env, ctx);
     }
 
     const collectPaths = ["/collect", "/event", "/"];
@@ -594,6 +604,91 @@ async function handleCollect(request, env, ctx) {
     ok: true,
     event_id: serverEvent.event_id,
     meta: metaJson,
+  });
+}
+
+/**
+ * @param {Request} request
+ * @param {Record<string, string | undefined>} env
+ * @param {ExecutionContext} ctx
+ */
+async function handleWebhookLead(request, env, ctx) {
+  if (!webhookTokenOk(request, env)) {
+    return jsonResponse(request, env, 401, {
+      ok: false,
+      error: "unauthorized_webhook",
+      detail: "Defina WEBHOOK_TOKEN e envie via Authorization: Bearer.",
+    });
+  }
+
+  const ct = request.headers.get("Content-Type") || "";
+  if (!ct.toLowerCase().includes("application/json")) {
+    return jsonResponse(request, env, 415, {
+      ok: false,
+      error: "unsupported_media_type",
+    });
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(request, env, 400, {
+      ok: false,
+      error: "invalid_json",
+    });
+  }
+
+  const lead = body && typeof body.lead === "object" ? body.lead : body;
+  if (!lead || typeof lead !== "object") {
+    return jsonResponse(request, env, 400, { ok: false, error: "invalid_lead_body" });
+  }
+
+  const eventIdRaw = typeof lead.event_id === "string" ? lead.event_id.trim() : "";
+  const eventId = eventIdRaw || (typeof crypto.randomUUID === "function" ? crypto.randomUUID() : "lead-" + Date.now());
+  const eventName = typeof lead.event_name === "string" && lead.event_name.trim() ? lead.event_name.trim() : "Lead";
+  const leadSource =
+    (typeof lead.source === "string" && lead.source.trim()) ||
+    (typeof lead.channel === "string" && lead.channel.trim()) ||
+    "webhook";
+  const leadName =
+    (typeof lead.name === "string" && lead.name.trim()) ||
+    (typeof lead.full_name === "string" && lead.full_name.trim()) ||
+    "";
+  const email =
+    (typeof lead.email === "string" && lead.email.trim()) ||
+    (typeof lead.user_email === "string" && lead.user_email.trim()) ||
+    "";
+  const phone =
+    (typeof lead.phone === "string" && lead.phone.trim()) ||
+    (typeof lead.telefone === "string" && lead.telefone.trim()) ||
+    (typeof lead.whatsapp === "string" && lead.whatsapp.trim()) ||
+    "";
+  const pageUrl =
+    (typeof lead.page_url === "string" && lead.page_url.trim()) ||
+    (typeof lead.url === "string" && lead.url.trim()) ||
+    "";
+
+  logMonitor(ctx, env, {
+    kind: "lead_capture",
+    webhook_received: true,
+    event_name: eventName,
+    event_id: eventId,
+    ok: true,
+    error: undefined,
+    detail: "lead_webhook",
+    lead_source: leadSource,
+    lead_name: leadName,
+    email_masked: email ? maskEmail(email) : "",
+    phone_masked: phone ? maskPhone(phone) : "",
+    page_url: truncateUrl(pageUrl, 120),
+  });
+
+  return jsonResponse(request, env, 200, {
+    ok: true,
+    event_id: eventId,
+    event_name: eventName,
+    lead_source: leadSource,
   });
 }
 

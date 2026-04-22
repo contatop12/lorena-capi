@@ -7,11 +7,14 @@
 
 ## Onde colocar segredos no Cloudflare
 
-1. **Worker (produção / preview)**  
+1. **Worker (produção / preview)**
+
    ```bash
    npx wrangler secret put META_ACCESS_TOKEN
    npx wrangler secret put MONITOR_TOKEN
-   ```  
+   npx wrangler secret put WEBHOOK_TOKEN
+   ```
+
    Confirme no Dashboard do Worker em **Settings → Variables** que aparecem como *Secret*.
 
 2. **Desenvolvimento local**  
@@ -20,7 +23,7 @@
 ## Variáveis “públicas” vs segredas
 
 - **Públicas** (`[vars]` / não secret): `PIXEL_ID`, `META_API_VERSION`, `ALLOWED_ORIGINS`, `WORKER_ENV`, `TEST_EVENT_CODE`, `EXPOSE_META_ERRORS`, `WORKER_EVENT_URL` (referência apenas).
-- **Segredas**: `META_ACCESS_TOKEN` (obrigatório), `MONITOR_TOKEN` (recomendado em `WORKER_ENV=production`).
+- **Segredas**: `META_ACCESS_TOKEN` (obrigatório), `MONITOR_TOKEN` (dashboard), `WEBHOOK_TOKEN` (integração `POST /webhook/lead`).
 
 ## Rotação e incidentes
 
