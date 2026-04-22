@@ -42,9 +42,12 @@ WORKER_ENV = "production"
 TEST_EVENT_CODE = "TEST7356"
 # Retornar detalhes da Meta em erros HTTP (desligado em produção por omissão)
 EXPOSE_META_ERRORS = "false"
+# Referência de endpoint público (espelho do .env)
+WORKER_EVENT_URL = "https://conversao-api-meta.suporte-922.workers.dev/event"
 
 # Painel de monitoramento: GET /dashboard (mesmo host do Worker)
 # MONITOR_TOKEN — secret recomendado (produção). Em WORKER_ENV=development pode ficar vazio.
+#   wrangler secret put MONITOR_TOKEN
 # EVENT_LOG — KV opcional para histórico entre invocações:
 #   npx wrangler kv namespace create meta-capi-event-log
 #   depois descomente e preencha id:
