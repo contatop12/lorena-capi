@@ -6,7 +6,9 @@
 #   TEST_EVENT_CODE, EXPOSE_META_ERRORS, WORKER_EVENT_URL
 #
 # Segredo (não commitar valor real):
-#   wrangler secret put META_ACCESS_TOKEN
+#   npx wrangler secret put META_ACCESS_TOKEN
+# Se der erro 10053 "already in use": apague META_ACCESS_TOKEN em Variables
+#   como TEXTO PLANO no Dashboard e crie de novo como Secret (ver directives/config_segredos.md).
 #
 # Desenvolvimento local: copie .dev.vars.example para .dev.vars e preencha.
 
