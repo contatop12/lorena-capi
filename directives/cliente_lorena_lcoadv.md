@@ -17,6 +17,7 @@ Um **token de acesso Meta** foi compartilhado em canal não seguro. Trate-o como
 | Origem CORS (produção) | `https://www.lcoadv.com.br` |
 | Worker (URL pública atual) | `https://conversao-api-meta.suporte-922.workers.dev` |
 | Endpoint do tracker | `https://conversao-api-meta.suporte-922.workers.dev/event` |
+| Painel de monitoramento | `https://conversao-api-meta.suporte-922.workers.dev/dashboard` — ver [monitor_painel.md](monitor_painel.md) |
 | Test Events (`test_event_code`) | `TEST7356` (variável `TEST_EVENT_CODE` no Worker) |
 
 Se o site também atender em `https://lcoadv.com.br` (sem `www`), inclua as **duas** origens em `ALLOWED_ORIGINS`, separadas por vírgula, para evitar bloqueio de CORS.

@@ -43,5 +43,14 @@ TEST_EVENT_CODE = "TEST7356"
 # Retornar detalhes da Meta em erros HTTP (desligado em produção por omissão)
 EXPOSE_META_ERRORS = "false"
 
+# Painel de monitoramento: GET /dashboard (mesmo host do Worker)
+# MONITOR_TOKEN — secret recomendado (produção). Em WORKER_ENV=development pode ficar vazio.
+# EVENT_LOG — KV opcional para histórico entre invocações:
+#   npx wrangler kv namespace create meta-capi-event-log
+#   depois descomente e preencha id:
+# [[kv_namespaces]]
+# binding = "EVENT_LOG"
+# id = "SEU_ID_AQUI"
+
 # META_ACCESS_TOKEN deve ser configurado via Dashboard ou:
 #   wrangler secret put META_ACCESS_TOKEN

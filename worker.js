@@ -3,20 +3,29 @@
  * Variáveis: PIXEL_ID, META_ACCESS_TOKEN, META_API_VERSION, ALLOWED_ORIGINS,
  *   WORKER_ENV (production|development), TEST_EVENT_CODE (opcional),
  *   EXPOSE_META_ERRORS (true para retornar corpo Meta em erros).
+ *   MONITOR_TOKEN (opcional, recomendado) — painel GET /dashboard e GET /api/monitor/events.
+ *   EVENT_LOG (KV opcional) — histórico de eventos no painel.
  * Contrato: directives/contrato_payload_capi.md
  */
+import { handleMonitorRequest } from "./monitor/router.js";
+import { scheduleMonitorLog, truncateUrl } from "./monitor/store.js";
+
 export default {
   /**
    * @param {Request} request
    * @param {Record<string, string | undefined>} env
+   * @param {ExecutionContext} ctx
    */
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = normalizePath(url.pathname);
 
     if (request.method === "OPTIONS") {
       return handleOptions(request, env, path);
     }
+
+    const monitorRes = await handleMonitorRequest(request, env, jsonResponse);
+    if (monitorRes) return monitorRes;
 
     if (request.method === "GET" && (path === "/" || path === "/health")) {
       return healthResponse(request, env);
@@ -33,7 +42,7 @@ export default {
     const originBlock = checkBrowserOriginPolicy(request, env);
     if (originBlock) return originBlock;
 
-    return handleCollect(request, env);
+    return handleCollect(request, env, ctx);
   },
 };
 
@@ -92,7 +101,7 @@ function corsHeadersFor(request, env) {
   if (allowOrigin) h.set("Access-Control-Allow-Origin", allowOrigin);
   h.set("Vary", "Origin");
   h.set("Access-Control-Allow-Methods", "POST, OPTIONS, GET");
-  h.set("Access-Control-Allow-Headers", "Content-Type");
+  h.set("Access-Control-Allow-Headers", "Content-Type, X-Monitor-Token");
   h.set("Access-Control-Max-Age", "86400");
   return h;
 }
@@ -149,6 +158,7 @@ function healthResponse(request, env) {
     ok: true,
     service: "meta-capi-worker",
     worker_env: (env.WORKER_ENV || "production").toLowerCase(),
+    dashboard: "/dashboard",
   };
   return new Response(JSON.stringify(body), { status: 200, headers: h });
 }
@@ -184,9 +194,20 @@ const MAX_EVENT_NAME_LEN = 128;
  * @param {Request} request
  * @param {Record<string, string | undefined>} env
  */
-async function handleCollect(request, env) {
+/**
+ * @param {ExecutionContext} ctx
+ */
+async function handleCollect(request, env, ctx) {
   const ct = request.headers.get("Content-Type") || "";
   if (!ct.toLowerCase().includes("application/json")) {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: null,
+      event_id: null,
+      ok: false,
+      error: "unsupported_media_type",
+      detail: "Content-Type",
+    });
     return jsonResponse(request, env, 415, { ok: false, error: "unsupported_media_type" });
   }
 
@@ -195,6 +216,14 @@ async function handleCollect(request, env) {
   const apiVersion = (env.META_API_VERSION || "v21.0").trim().replace(/^v?/, "v");
 
   if (!pixelId || !token) {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: null,
+      event_id: null,
+      ok: false,
+      error: "missing_env",
+      detail: "PIXEL_ID ou META_ACCESS_TOKEN",
+    });
     return jsonResponse(request, env, 500, {
       ok: false,
       error: "missing_env",
@@ -204,6 +233,14 @@ async function handleCollect(request, env) {
 
   const rawText = await request.text();
   if (rawText.length > MAX_BODY_BYTES) {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: null,
+      event_id: null,
+      ok: false,
+      error: "payload_too_large",
+      detail: "corpo > limite",
+    });
     return jsonResponse(request, env, 413, { ok: false, error: "payload_too_large" });
   }
 
@@ -211,18 +248,50 @@ async function handleCollect(request, env) {
   try {
     body = JSON.parse(rawText || "{}");
   } catch {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: null,
+      event_id: null,
+      ok: false,
+      error: "invalid_json",
+      detail: "JSON inválido",
+    });
     return jsonResponse(request, env, 500, { ok: false, error: "invalid_json" });
   }
 
   if (!body || typeof body !== "object") {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: null,
+      event_id: null,
+      ok: false,
+      error: "empty_body",
+      detail: "corpo vazio",
+    });
     return jsonResponse(request, env, 500, { ok: false, error: "empty_body" });
   }
 
   const eventName = body.event_name;
   if (!eventName || typeof eventName !== "string") {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: null,
+      event_id: typeof body.event_id === "string" ? body.event_id : null,
+      ok: false,
+      error: "missing_event_name",
+      detail: truncateUrl(body.event_source_url, 72) || "—",
+    });
     return jsonResponse(request, env, 500, { ok: false, error: "missing_event_name" });
   }
   if (eventName.length > MAX_EVENT_NAME_LEN) {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: eventName,
+      event_id: typeof body.event_id === "string" ? body.event_id : null,
+      ok: false,
+      error: "event_name_too_long",
+      detail: truncateUrl(body.event_source_url, 72),
+    });
     return jsonResponse(request, env, 500, { ok: false, error: "event_name_too_long" });
   }
 
@@ -265,6 +334,14 @@ async function handleCollect(request, env) {
       body: JSON.stringify(graphBody),
     });
   } catch (e) {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: eventName,
+      event_id: serverEvent.event_id || null,
+      ok: false,
+      error: "meta_fetch_failed",
+      detail: truncateUrl(serverEvent.event_source_url, 72),
+    });
     return jsonResponse(request, env, 500, {
       ok: false,
       error: "meta_fetch_failed",
@@ -281,6 +358,14 @@ async function handleCollect(request, env) {
   }
 
   if (!metaRes.ok) {
+    scheduleMonitorLog(ctx, env.EVENT_LOG, {
+      ts: Date.now(),
+      event_name: eventName,
+      event_id: serverEvent.event_id || null,
+      ok: false,
+      error: "meta_api_error",
+      detail: "HTTP " + metaRes.status + " · " + truncateUrl(serverEvent.event_source_url, 48),
+    });
     const payload = {
       ok: false,
       error: "meta_api_error",
@@ -289,6 +374,19 @@ async function handleCollect(request, env) {
     if (exposeMetaErrors(env)) payload.meta = metaJson;
     return jsonResponse(request, env, 500, payload);
   }
+
+  const received =
+    metaJson && typeof metaJson.events_received === "number" ? metaJson.events_received : undefined;
+  scheduleMonitorLog(ctx, env.EVENT_LOG, {
+    ts: Date.now(),
+    event_name: eventName,
+    event_id: serverEvent.event_id || null,
+    ok: true,
+    error: undefined,
+    detail:
+      (received != null ? "events_received=" + received + " · " : "") +
+      truncateUrl(serverEvent.event_source_url, 64),
+  });
 
   return jsonResponse(request, env, 200, {
     ok: true,
