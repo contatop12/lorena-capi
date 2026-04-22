@@ -32,25 +32,36 @@ head_sampling_rate = 1
 # Variáveis públicas de configuração (por cliente / ambiente)
 # Cliente ativo: Lorena / LCOAdv — ver directives/cliente_lorena_lcoadv.md
 [vars]
-PIXEL_ID = "993975279878737"
-META_API_VERSION = "v21.0"
-# Produção: lista explícita. Adicione https://lcoadv.com.br se o site responder sem www.
-ALLOWED_ORIGINS = "https://www.lcoadv.com.br"
-# production = CORS estrito; development = permite * ou vazio em ALLOWED_ORIGINS
-WORKER_ENV = "production"
-# Test Events (Meta Events Manager) — Lorena / LCOAdv. Remova ou esvazie após validar.
-TEST_EVENT_CODE = "TEST7356"
-# Retornar detalhes da Meta em erros HTTP (desligado em produção por omissão)
-EXPOSE_META_ERRORS = "false"
+# -----------------------------------------------------------------------------
+# Meta — Conversions API (CAPI)
+# -----------------------------------------------------------------------------
+PIXEL_ID=993975279878737
+META_ACCESS_TOKEN=EAARWyYMfyK4BReD9uvMyOf99ecbj4BNN2aFuRA0hmLlnDTAa9s5NVshZAEl5C1E5wDjZAd88sbOL1tLBRRLdtCZAB81ksv6cBsBbxkM0QAAqm5lhiEfWyeEDYIW4qgpsk0RBkzUfTfP8lJ6JtpWN7ZBw8vIADmej3EZC5ExkDZBAznPclnAZBFa2Rg2e7CVnTuaTwZDZD
+META_API_VERSION=v21.0
 
-# Painel de monitoramento: GET /dashboard (mesmo host do Worker)
-# MONITOR_TOKEN — secret recomendado (produção). Em WORKER_ENV=development pode ficar vazio.
-# EVENT_LOG — KV opcional para histórico entre invocações:
-#   npx wrangler kv namespace create meta-capi-event-log
-#   depois descomente e preencha id:
-# [[kv_namespaces]]
-# binding = "EVENT_LOG"
-# id = "SEU_ID_AQUI"
+# -----------------------------------------------------------------------------
+# Meta Marketing API
+# -----------------------------------------------------------------------------
+META_ACCESS_TOKEN=EAARXLJQrAYABRMJwn0p09oVYxdPREfvMtaLa0enWydV3kbXffzVofqrOs1XuZCWMwgZCByOj4Qh85jRX0cdgEcGUbTGzrYOOyZCauX2k4Fip5NSDaklCwkoxykkVjYgoNI17EDBDzs0vv1VS2qAmCODg69m8PGroOFZB7q782ZCZA6QkeNZCZAwMUfBY9vx9
+META_BUSINESS_ID=438294343676061
+SEU_APP_SECRET=d99af5bb481277f4bbf84b4130069012
+SEU_APP_ID=1221748882866560
 
-# META_ACCESS_TOKEN deve ser configurado via Dashboard ou:
-#   wrangler secret put META_ACCESS_TOKEN
+
+# -----------------------------------------------------------------------------
+# Cloudflare Worker (CORS e modo)
+# -----------------------------------------------------------------------------
+WORKER_ENV=production
+ALLOWED_ORIGINS=https://www.lcoadv.com.br
+EXPOSE_META_ERRORS=false
+
+# Test Events (Events Manager). Remova ou deixe vazio após validar o site.
+TEST_EVENT_CODE=TEST7356
+
+# -----------------------------------------------------------------------------
+# Site / tracker (só referência — o browser usa data-endpoint no HTML)
+# -----------------------------------------------------------------------------
+WORKER_EVENT_URL=https://conversao-api-meta.suporte-922.workers.dev/event
+
+# Painel /dashboard — use o mesmo valor no Worker (secret MONITOR_TOKEN). Gere uma string longa aleatória.
+MONITOR_TOKEN=
