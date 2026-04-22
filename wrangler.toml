@@ -23,7 +23,9 @@ preview_urls = true
 # Domínios customizados (tracking + validação) no mesmo Worker.
 routes = [
   { pattern = "track.lcoadv.com.br", zone_name = "lcoadv.com.br", custom_domain = true },
+  { pattern = "www.track.lcoadv.com.br", zone_name = "lcoadv.com.br", custom_domain = true },
   { pattern = "validacao.lcoadv.com.br", zone_name = "lcoadv.com.br", custom_domain = true },
+  { pattern = "www.validacao.lcoadv.com.br", zone_name = "lcoadv.com.br", custom_domain = true },
 ]
 
 # Observabilidade — mesma estrutura em todas as implantações (Wrangler / Git / CI).
@@ -48,8 +50,8 @@ head_sampling_rate = 1
 [vars]
 PIXEL_ID = "993975279878737"
 META_API_VERSION = "v25.0"
-# Produção: lista explícita. Adicione https://lcoadv.com.br se o site responder sem www.
-ALLOWED_ORIGINS = "https://www.lcoadv.com.br"
+# Produção: lista explícita com/sem www para evitar bloqueio de CORS.
+ALLOWED_ORIGINS = "https://www.lcoadv.com.br,https://lcoadv.com.br"
 # production = CORS estrito; development = permite * ou vazio em ALLOWED_ORIGINS
 WORKER_ENV = "production"
 # Retornar detalhes da Meta em erros HTTP (desligado em produção por omissão)
