@@ -12,7 +12,7 @@
 #
 # Desenvolvimento local: copie .dev.vars.example para .dev.vars e preencha.
 
-name = "conversao-api-meta"
+name = "lorena-capi"
 main = "worker.js"
 compatibility_date = "2024-10-01"
 
@@ -68,7 +68,7 @@ WORKER_EVENT_URL = "https://track.lcoadv.com.br/event"
 # EVENT_LOG — KV para histórico entre invocações (dashboard / monitor).
 [[kv_namespaces]]
 binding = "EVENT_LOG"
-id = "4a3ae654039547a5b5e7a444bb654355"
+id = "7a12ca1e00d44fe29c4760d7a3707540"
 
 # META_ACCESS_TOKEN deve ser configurado via Dashboard ou:
 #   wrangler secret put META_ACCESS_TOKEN
