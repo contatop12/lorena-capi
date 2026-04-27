@@ -27,3 +27,5 @@ build/
 .vscode/
 .DS_Store
 Thumbs.db
+# Claude Code (configuração local do agente)
+.claude/
