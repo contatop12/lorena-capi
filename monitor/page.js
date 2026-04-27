@@ -4,7 +4,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Meta CAPI — monitor</title>
+  <title>{{CLIENT_NAME}} — monitor</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@600;700&display=swap" rel="stylesheet" />
@@ -259,7 +259,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
 </head>
 <body>
   <header>
-    <h1>Tráfego CAPI Framework</h1>
+    <h1>{{CLIENT_NAME}}</h1>
     <p class="sub">Visão operacional de eventos CAPI, leads via webhook e correlação por <code>event_id</code>. Use filtros para investigar queda de entrega e validar se o lead entrou no fluxo server-side.</p>
   </header>
   <main>

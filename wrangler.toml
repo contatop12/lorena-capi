@@ -49,6 +49,7 @@ head_sampling_rate = 1
 # Cliente ativo: Lorena / LCOAdv — ver directives/cliente_lorena_lcoadv.md
 [vars]
 PIXEL_ID = "993975279878737"
+CLIENT_NAME = "CAPI Lorena"
 META_API_VERSION = "v25.0"
 # Produção: lista explícita com/sem www para evitar bloqueio de CORS.
 ALLOWED_ORIGINS = "https://www.lcoadv.com.br,https://lcoadv.com.br"

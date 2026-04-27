@@ -19,7 +19,9 @@ export async function handleMonitorRequest(request, env, jsonResponse) {
         encodeURIComponent(tok) +
         "; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800"
       : "meta_monitor_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
-    return new Response(DASHBOARD_HTML, {
+    const clientName = (env.CLIENT_NAME || "CAPI Monitor").trim();
+    const html = DASHBOARD_HTML.replace(/\{\{CLIENT_NAME\}\}/g, clientName);
+    return new Response(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-store",
