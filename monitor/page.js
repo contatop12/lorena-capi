@@ -53,7 +53,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     .banner.err { border-color: rgba(255, 77, 109, 0.45); color: #fca3b8; }
     .kpis {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 0.7rem;
       margin: 0.9rem 0 1rem;
     }
@@ -611,6 +611,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     if (rateCard) rateCard.className = "kpi " + (rate >= 80 ? "kpi-success" : "kpi-warn");
     var errCard = document.getElementById("kpiErrCard");
     if (errCard)  errCard.className  = "kpi " + (err > 0 ? "kpi-danger" : "");
+    var okCard = document.getElementById("kpiOkCard");
+    if (okCard)   okCard.className   = "kpi " + ((m.event_ok || 0) > 0 ? "kpi-success" : "");
   }
 
   function refreshEventFilter(events) {

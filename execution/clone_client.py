@@ -18,7 +18,7 @@ TEMPLATE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 IGNORE = shutil.ignore_patterns(
     ".git", ".wrangler", "node_modules", ".tmp",
-    "*.log", "__pycache__", "*.pyc", ".env",
+    "*.log", "__pycache__", "*.pyc", ".env", ".dev.vars",
 )
 
 

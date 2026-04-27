@@ -28,8 +28,8 @@ def test_event():
         "event_id": event_id,
         "event_time": int(time.time()),
         "user_data": {
-            "em": [sha256("test@example.com")],
-            "ph": [sha256("11999999999")],
+            "em": sha256("test@example.com"),
+            "ph": sha256("11999999999"),
             "client_ip_address": "127.0.0.1",
             "client_user_agent": "Mozilla/5.0 (Test; Python/exec)",
         },

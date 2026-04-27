@@ -164,7 +164,7 @@ function buildMonitorView(items) {
       event_ok: eventOk,
       event_pending: eventPending,
       event_deduplicated: eventDeduplicated,
-      event_error: Math.max(0, eventTotal - eventOk),
+      event_error: events.filter((e) => e.capi_status === "failed").length,
       lead_total: leadTotal,
       correlation_confirmed: corrConfirmed,
       correlation_pending: corrPending,
