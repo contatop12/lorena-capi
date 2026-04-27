@@ -40,7 +40,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       font-size: clamp(1.35rem, 3vw, 2rem);
     }
     .sub { margin: 0; max-width: 70rem; color: var(--muted); font-size: 0.78rem; line-height: 1.5; }
-    main { padding: 1rem 1.5rem 2rem; }
+    main { padding: 1rem 1.5rem 5rem; }
     .banner {
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -255,6 +255,59 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       font-size: 0.58rem;
       color: #9ca3af;
     }
+    .dock {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.15rem;
+      background: rgba(15, 16, 19, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.4rem 0.75rem;
+      z-index: 100;
+      font-size: 0.72rem;
+      white-space: nowrap;
+    }
+    .dock-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      padding: 0.28rem 0.5rem;
+      border-radius: 999px;
+      color: var(--muted);
+      text-decoration: none;
+      overflow: hidden;
+      max-width: 1.8rem;
+      transition: max-width 0.22s ease, color 0.15s, background 0.15s;
+    }
+    .dock-item:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+      max-width: 10rem;
+    }
+    .dock-label {
+      overflow: hidden;
+      max-width: 0;
+      transition: max-width 0.22s ease, margin-left 0.22s ease;
+      margin-left: 0;
+    }
+    .dock-item:hover .dock-label {
+      max-width: 8rem;
+      margin-left: 0.35rem;
+    }
+    .dock-sep {
+      width: 1px;
+      height: 0.9rem;
+      background: var(--line);
+      margin: 0 0.25rem;
+      flex-shrink: 0;
+    }
+    .dock-icon { flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -338,6 +391,18 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <div id="eventDetailTimeline"></div>
     </div>
   </dialog>
+
+  <nav class="dock" aria-label="Navegação">
+    <span class="dock-item">
+      <span class="dock-icon">⬡</span>
+      <span class="dock-label">{{CLIENT_NAME}}</span>
+    </span>
+    <span class="dock-sep" role="separator"></span>
+    <a class="dock-item" href="https://capi.p12digital.com.br" target="_blank" rel="noopener noreferrer">
+      <span class="dock-icon">↗</span>
+      <span class="dock-label">Central CAPI</span>
+    </a>
+  </nav>
 
   <script>
 (function () {
