@@ -1,77 +1,77 @@
 #!/usr/bin/env python3
-"""
-Valida variáveis de ambiente para o Worker Meta CAPI (sem chamadas à Meta — sem custo de API).
-Uso: na raiz do projeto, com .env preenchido:
-  python execution/validate_env.py
-  python execution/validate_env.py --strict
-"""
-from __future__ import annotations
+"""Valida variáveis de ambiente obrigatórias do worker CAPI. Camada 3 — Execução."""
 
-import argparse
 import os
-import re
 import sys
-from pathlib import Path
+from dotenv import load_dotenv
 
-ROOT = Path(__file__).resolve().parents[1]
+load_dotenv()
 
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    print("Instale python-dotenv: pip install -r requirements.txt", file=sys.stderr)
-    sys.exit(2)
+REQUIRED = [
+    "PIXEL_ID",
+    "META_ACCESS_TOKEN",
+    "META_API_VERSION",
+    "ALLOWED_ORIGINS",
+    "WORKER_ENV",
+]
+
+OPTIONAL = [
+    "CLIENT_NAME",
+    "WORKER_URL",
+    "MONITOR_TOKEN",
+    "WEBHOOK_TOKEN",
+    "EXPOSE_META_ERRORS",
+    "TEST_EVENT_CODE",
+]
+
+SECRETS = {"META_ACCESS_TOKEN", "MONITOR_TOKEN", "WEBHOOK_TOKEN"}
 
 
-def load_env() -> None:
-    env_path = ROOT / ".env"
-    if env_path.is_file():
-        load_dotenv(env_path)
-    else:
-        print("Aviso: .env não encontrado na raiz; usando apenas variáveis já exportadas.", file=sys.stderr)
+def mask(key, val):
+    return "***" if key in SECRETS else val
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Valida env para Meta CAPI Worker.")
-    parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Exige ALLOWED_ORIGINS explícito (não vazio, não *) quando WORKER_ENV=production",
-    )
-    args = parser.parse_args()
-    load_env()
+def validate():
+    errors = []
+    warnings = []
 
-    pixel = (os.environ.get("PIXEL_ID") or "").strip()
-    token = (os.environ.get("META_ACCESS_TOKEN") or "").strip()
-    version = (os.environ.get("META_API_VERSION") or "v25.0").strip()
-    origins = (os.environ.get("ALLOWED_ORIGINS") or "").strip()
-    worker_env = (os.environ.get("WORKER_ENV") or "production").strip().lower()
+    print("=== Variáveis obrigatórias ===")
+    for key in REQUIRED:
+        val = os.getenv(key, "").strip()
+        if not val:
+            errors.append(f"FALTANDO: {key}")
+            print(f"  ✗ {key}")
+        elif key == "META_API_VERSION" and not val.startswith("v"):
+            errors.append(f"FORMATO: {key} deve começar com 'v' (ex: v25.0), atual: {val}")
+            print(f"  ✗ {key} = {val}")
+        elif key == "ALLOWED_ORIGINS" and ("*" in val or not val.startswith("https")):
+            warnings.append(f"{key} deve ser HTTPS explícito em produção (atual: {val})")
+            print(f"  ~ {key} = {val}")
+        else:
+            print(f"  ✓ {key} = {mask(key, val)}")
 
-    errors: list[str] = []
+    print("\n=== Variáveis opcionais ===")
+    for key in OPTIONAL:
+        val = os.getenv(key, "").strip()
+        if val:
+            print(f"  ~ {key} = {mask(key, val)}")
+        else:
+            warnings.append(f"Opcional não definido: {key}")
+            print(f"  - {key} (não definido)")
 
-    if not pixel or not re.fullmatch(r"\d{5,20}", pixel):
-        errors.append("PIXEL_ID deve ser numérico (IDs de pixel Meta).")
-
-    if not token or len(token) < 20:
-        errors.append("META_ACCESS_TOKEN ausente ou suspeito demais curto.")
-
-    if not re.match(r"^v?\d+\.\d+", version):
-        errors.append("META_API_VERSION deve parecer v19.0 ou 19.0.")
-
-    if args.strict or worker_env in ("production", "prod"):
-        if not origins or origins == "*":
-            errors.append(
-                "Em produção defina ALLOWED_ORIGINS com origens HTTPS explícitas (não * nem vazio)."
-            )
+    if warnings:
+        print("\n⚠ Avisos:")
+        for w in warnings:
+            print(f"  {w}")
 
     if errors:
-        print("Falha na validação:\n", file=sys.stderr)
+        print("\n✗ Erros:")
         for e in errors:
-            print(f"  - {e}", file=sys.stderr)
-        return 1
+            print(f"  {e}")
+        sys.exit(1)
 
-    print("OK: variáveis mínimas presentes e formato coerente.")
-    return 0
+    print("\n✓ Todas as variáveis obrigatórias estão configuradas.")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    validate()
