@@ -428,7 +428,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   var fStatus = document.getElementById("fStatus");
   var btnAuto = document.getElementById("btnAuto");
   var state = { events: [], leads: [], correlations: [], metrics: {}, eventTimelines: {} };
-  var autoTimer = null;
+  var eventSource = null;
   var autoEnabled = true;
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   function fmtTs(ts) {
@@ -705,6 +705,26 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }
   }
 
+  function startSSE() {
+    if (eventSource) { try { eventSource.close(); } catch (_) {} eventSource = null; }
+    eventSource = new EventSource("/api/monitor/stream");
+    eventSource.onmessage = function (ev) {
+      try {
+        var data = JSON.parse(ev.data);
+        renderBanners(data, null);
+        paint(data);
+      } catch (_) {}
+    };
+    eventSource.addEventListener("reconnect", function () {
+      try { eventSource.close(); } catch (_) {}
+      eventSource = null;
+      if (autoEnabled) setTimeout(startSSE, 400);
+    });
+    eventSource.onerror = function () {
+      renderBanners(null, "Conexão SSE instável — reconectando automaticamente...");
+    };
+  }
+
   fEvent.onchange = renderEvents;
   fStatus.onchange = renderEvents;
   document.addEventListener("click", function (ev) {
@@ -725,14 +745,13 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     autoEnabled = !autoEnabled;
     btnAuto.textContent = "Auto: " + (autoEnabled ? "ON" : "OFF");
     if (autoEnabled) {
-      if (!autoTimer) autoTimer = setInterval(load, 5000);
+      startSSE();
       load();
-    } else if (autoTimer) {
-      clearInterval(autoTimer);
-      autoTimer = null;
+    } else {
+      if (eventSource) { try { eventSource.close(); } catch (_) {} eventSource = null; }
     }
   };
-  autoTimer = setInterval(load, 5000);
+  startSSE();
   load();
 })();
   </script>
