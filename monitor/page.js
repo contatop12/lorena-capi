@@ -308,6 +308,14 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       flex-shrink: 0;
     }
     .dock-icon { flex-shrink: 0; }
+    @keyframes kpi-update {
+      from { opacity: 0.45; transform: translateY(4px); }
+      to   { opacity: 1;    transform: translateY(0); }
+    }
+    .kpi .val.updated { animation: kpi-update 0.35s ease; }
+    .kpi.kpi-danger  .val { color: var(--err); }
+    .kpi.kpi-success .val { color: var(--ok); }
+    .kpi.kpi-warn    .val { color: var(--warn); }
   </style>
 </head>
 <body>
@@ -318,10 +326,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <main>
     <div id="banners"></div>
     <section class="kpis">
-      <article class="kpi"><div class="lbl">CAPI em validação</div><div class="val" id="kpiEventTotal">0</div></article>
-      <article class="kpi"><div class="lbl">CAPI sucesso</div><div class="val" id="kpiEventOk">0</div></article>
+      <article class="kpi"><div class="lbl">CAPI em validação</div><div class="val" id="kpiEventPending">0</div></article>
+      <article class="kpi" id="kpiOkCard"><div class="lbl">CAPI sucesso</div><div class="val" id="kpiEventOk">0</div></article>
+      <article class="kpi" id="kpiRateCard"><div class="lbl">Taxa de sucesso</div><div class="val" id="kpiRate">0%</div></article>
       <article class="kpi"><div class="lbl">Leads webhook</div><div class="val" id="kpiLeadTotal">0</div></article>
       <article class="kpi"><div class="lbl">Desduplicados</div><div class="val" id="kpiCorr">0</div></article>
+      <article class="kpi" id="kpiErrCard"><div class="lbl">Falhas</div><div class="val" id="kpiErr">0</div></article>
     </section>
 
     <section class="card">
@@ -465,11 +475,27 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     }
   }
 
+  function setKpi(id, text) {
+    var el = document.getElementById(id);
+    if (!el || el.textContent === text) return;
+    el.textContent = text;
+    el.classList.remove("updated");
+    void el.offsetWidth;
+    el.classList.add("updated");
+  }
   function renderMetrics(m) {
-    document.getElementById("kpiEventTotal").textContent = String(m.event_pending || 0);
-    document.getElementById("kpiEventOk").textContent = String(m.event_ok || 0);
-    document.getElementById("kpiLeadTotal").textContent = String(m.lead_total || 0);
-    document.getElementById("kpiCorr").textContent = String(m.event_deduplicated || 0);
+    setKpi("kpiEventPending", String(m.event_pending || 0));
+    setKpi("kpiEventOk",      String(m.event_ok || 0));
+    setKpi("kpiLeadTotal",    String(m.lead_total || 0));
+    setKpi("kpiCorr",         String(m.event_deduplicated || 0));
+    var rate = m.capi_success_rate || 0;
+    setKpi("kpiRate", rate + "%");
+    var err = m.event_error || 0;
+    setKpi("kpiErr", String(err));
+    var rateCard = document.getElementById("kpiRateCard");
+    if (rateCard) rateCard.className = "kpi " + (rate >= 80 ? "kpi-success" : "kpi-warn");
+    var errCard = document.getElementById("kpiErrCard");
+    if (errCard)  errCard.className  = "kpi " + (err > 0 ? "kpi-danger" : "");
   }
 
   function refreshEventFilter(events) {
