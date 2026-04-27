@@ -316,6 +316,44 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     .kpi.kpi-danger  .val { color: var(--err); }
     .kpi.kpi-success .val { color: var(--ok); }
     .kpi.kpi-warn    .val { color: var(--warn); }
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes flash-new {
+      0%   { background: rgba(255, 107, 44, 0.16); }
+      100% { background: transparent; }
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.25; }
+    }
+    .pulse-dot {
+      display: inline-block;
+      width: 0.48rem;
+      height: 0.48rem;
+      border-radius: 999px;
+      background: var(--accent);
+      animation: pulse-dot 1.4s ease infinite;
+      margin-right: 0.45rem;
+      vertical-align: middle;
+    }
+    .feed-wrap {
+      height: 220px;
+      overflow-y: auto;
+      padding: 0.35rem 0;
+    }
+    .feed-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.55rem;
+      padding: 0.28rem 0.7rem;
+      font-size: 0.70rem;
+      animation: slide-in 0.22s ease, flash-new 1.5s ease;
+    }
+    .feed-ts   { color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; min-width: 5.5rem; }
+    .feed-type { min-width: 9rem; }
+    .feed-id   { color: var(--muted); font-size: 0.64rem; min-width: 6rem; }
   </style>
 </head>
 <body>
@@ -353,6 +391,11 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
       <button id="btnRefresh">Atualizar</button>
       <button class="primary" id="btnAuto">Auto: ON</button>
     </div>
+
+    <section class="card">
+      <h3><span class="pulse-dot"></span>Atividade ao vivo</h3>
+      <div class="feed-wrap" id="feedWrap"><div class="empty">Aguardando eventos...</div></div>
+    </section>
 
     <section class="card">
       <h3>Leads recebidos (webhook)</h3>
@@ -417,6 +460,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   <script>
 (function () {
   var banners = document.getElementById("banners");
+  var feedWrap = document.getElementById("feedWrap");
   var eventRows = document.getElementById("eventRows");
   var leadRows = document.getElementById("leadRows");
   var weekChart = document.getElementById("weekChart");
@@ -431,6 +475,52 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   var eventSource = null;
   var autoEnabled = true;
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+  var knownFeedKeys = new Set();
+
+  function fmtTsShort(ts) {
+    var d = new Date(Number(ts || Date.now()));
+    return [d.getHours(), d.getMinutes(), d.getSeconds()]
+      .map(function (n) { return String(n).padStart(2, "0"); }).join(":");
+  }
+
+  function shortId(id) {
+    var s = String(id || "");
+    if (!s) return "—";
+    return s.length > 10 ? s.slice(0, 5) + "…" + s.slice(-4) : s;
+  }
+
+  function feedKey(item) {
+    return String(item.event_id || "") + "_" + String(item.ts || "");
+  }
+
+  function updateFeed(events, leads) {
+    var all = (events || []).concat(leads || []).sort(function (a, b) {
+      return Number(b.ts || 0) - Number(a.ts || 0);
+    });
+    var firstRender = feedWrap.querySelector(".empty") !== null;
+    if (firstRender && all.length) feedWrap.innerHTML = "";
+    all.forEach(function (item) {
+      var key = feedKey(item);
+      if (knownFeedKeys.has(key)) return;
+      knownFeedKeys.add(key);
+      var isLead = item.kind === "lead_capture" || !!item.webhook_received;
+      var capiStatus = item.capi_status ||
+        (item.ok === true ? "validated_capi" : item.ok === false ? "failed" : "pending");
+      var row = document.createElement("div");
+      row.className = "feed-row";
+      row.innerHTML =
+        '<span class="feed-ts">[' + fmtTsShort(item.ts) + ']</span>' +
+        '<span class="feed-type">' + esc(isLead ? "Lead recebido" : (item.event_name || "Evento CAPI")) + '</span>' +
+        '<span class="feed-id">' + esc(shortId(item.event_id)) + '</span>' +
+        capiSemaphore(capiStatus);
+      feedWrap.insertBefore(row, feedWrap.firstChild);
+    });
+    while (feedWrap.children.length > 50) {
+      feedWrap.removeChild(feedWrap.lastChild);
+    }
+  }
+
   function fmtTs(ts) {
     var n = Number(ts || Date.now());
     var d = new Date(n);
@@ -683,6 +773,7 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     refreshEventFilter(state.events);
     renderEvents();
     renderLeads();
+    updateFeed(state.events, state.leads);
   }
 
   async function load() {
