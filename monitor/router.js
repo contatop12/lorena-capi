@@ -5,6 +5,7 @@ import { DASHBOARD_HTML } from "./page.js";
 /**
  * @param {Request} request
  * @param {Record<string, string | undefined>} env
+ * @param {ExecutionContext} ctx
  * @param {(req: Request, env: Record<string, string | undefined>, status: number, body: object) => Response} jsonResponse
  * @returns {Promise<Response | null>}
  */
@@ -36,21 +37,21 @@ export async function handleMonitorRequest(request, env, ctx, jsonResponse) {
     if (!monitorTokenOk(request, env)) {
       return jsonResponse(request, env, 401, { ok: false, error: "unauthorized_monitor" });
     }
-    var transform = new TransformStream();
-    var writer = transform.writable.getWriter();
-    var encoder = new TextEncoder();
+    const transform = new TransformStream();
+    const writer = transform.writable.getWriter();
+    const encoder = new TextEncoder();
 
     function sseWrite(payload) {
       return writer.write(encoder.encode("data: " + payload + "\n\n"));
     }
 
     async function pump() {
-      var lastPayload = "";
-      var deadline = Date.now() + 25000;
+      let lastPayload = "";
+      const deadline = Date.now() + 25000;
       try {
         while (Date.now() < deadline) {
-          var data = await listMonitorEvents(env.EVENT_LOG);
-          var payload = JSON.stringify(data);
+          const data = await listMonitorEvents(env.EVENT_LOG);
+          const payload = JSON.stringify(data);
           if (payload !== lastPayload) {
             lastPayload = payload;
             await sseWrite(payload);
@@ -65,7 +66,7 @@ export async function handleMonitorRequest(request, env, ctx, jsonResponse) {
       }
     }
 
-    pump();
+    ctx.waitUntil(pump());
 
     return new Response(transform.readable, {
       headers: {
