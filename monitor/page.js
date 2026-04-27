@@ -354,6 +354,15 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     .feed-ts   { color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; min-width: 5.5rem; }
     .feed-type { min-width: 9rem; }
     .feed-id   { color: var(--muted); font-size: 0.64rem; min-width: 6rem; }
+    @keyframes highlight-row {
+      0%   { border-left-color: rgba(255, 107, 44, 0.9); }
+      50%  { border-left-color: transparent; }
+      100% { border-left-color: rgba(255, 107, 44, 0.9); }
+    }
+    tr.row-new td:first-child {
+      border-left: 2px solid var(--accent) !important;
+      animation: highlight-row 0.55s ease 2;
+    }
   </style>
 </head>
 <body>
@@ -477,6 +486,8 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
   function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 
   var knownFeedKeys = new Set();
+  var knownEventKeys = new Set();
+  var knownLeadKeys  = new Set();
 
   function fmtTsShort(ts) {
     var d = new Date(Number(ts || Date.now()));
@@ -519,6 +530,20 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     while (feedWrap.children.length > 50) {
       feedWrap.removeChild(feedWrap.lastChild);
     }
+  }
+
+  function highlightNewRows(tbody, items, keyFn, knownSet) {
+    var rows = tbody ? tbody.querySelectorAll("tr") : [];
+    items.forEach(function (item, i) {
+      var key = keyFn(item);
+      if (!knownSet.has(key) && rows[i]) {
+        rows[i].classList.add("row-new");
+        (function (r) {
+          setTimeout(function () { if (r) r.classList.remove("row-new"); }, 1500);
+        })(rows[i]);
+      }
+      knownSet.add(key);
+    });
   }
 
   function fmtTs(ts) {
@@ -774,6 +799,12 @@ export const DASHBOARD_HTML = `<!DOCTYPE html>
     renderEvents();
     renderLeads();
     updateFeed(state.events, state.leads);
+    highlightNewRows(eventRows, state.events,
+      function (e) { return String(e.event_id || "") + "_" + String(e.ts || ""); },
+      knownEventKeys);
+    highlightNewRows(leadRows, state.leads,
+      function (l) { return String(l.event_id || "") + "_" + String(l.ts || ""); },
+      knownLeadKeys);
   }
 
   async function load() {
