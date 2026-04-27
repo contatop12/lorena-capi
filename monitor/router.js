@@ -8,7 +8,7 @@ import { DASHBOARD_HTML } from "./page.js";
  * @param {(req: Request, env: Record<string, string | undefined>, status: number, body: object) => Response} jsonResponse
  * @returns {Promise<Response | null>}
  */
-export async function handleMonitorRequest(request, env, jsonResponse) {
+export async function handleMonitorRequest(request, env, ctx, jsonResponse) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/$/, "") || "/";
 
@@ -28,6 +28,52 @@ export async function handleMonitorRequest(request, env, jsonResponse) {
         "Referrer-Policy": "no-referrer",
         "X-Content-Type-Options": "nosniff",
         "Set-Cookie": cookie,
+      },
+    });
+  }
+
+  if (request.method === "GET" && path === "/api/monitor/stream") {
+    if (!monitorTokenOk(request, env)) {
+      return jsonResponse(request, env, 401, { ok: false, error: "unauthorized_monitor" });
+    }
+    var transform = new TransformStream();
+    var writer = transform.writable.getWriter();
+    var encoder = new TextEncoder();
+
+    function sseWrite(payload) {
+      return writer.write(encoder.encode("data: " + payload + "\n\n"));
+    }
+
+    async function pump() {
+      var lastPayload = "";
+      var deadline = Date.now() + 25000;
+      try {
+        while (Date.now() < deadline) {
+          var data = await listMonitorEvents(env.EVENT_LOG);
+          var payload = JSON.stringify(data);
+          if (payload !== lastPayload) {
+            lastPayload = payload;
+            await sseWrite(payload);
+          }
+          await new Promise(function (resolve) { setTimeout(resolve, 2000); });
+        }
+        await writer.write(encoder.encode("event: reconnect\ndata: {}\n\n"));
+      } catch (_) {
+        // cliente desconectou
+      } finally {
+        await writer.close().catch(function () {});
+      }
+    }
+
+    pump();
+
+    return new Response(transform.readable, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
       },
     });
   }

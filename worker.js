@@ -190,7 +190,7 @@ export default {
       return handleOptions(request, env, path);
     }
 
-    const monitorRes = await handleMonitorRequest(request, env, jsonResponse);
+    const monitorRes = await handleMonitorRequest(request, env, ctx, jsonResponse);
     if (monitorRes) return monitorRes;
 
     if (request.method === "GET" && (path === "/" || path === "/health")) {
